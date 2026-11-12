@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { Search, X, ArrowUpDown } from 'lucide-react';
-import { INITIAL_PRODUCTS } from '../data/mockData';
 import { ProductCard } from '../components/common/ProductCard';
 import { useNavigation } from '../context/NavigationContext';
+import { useCMS } from '../context/CMSContext';
 
 export const ProdukPage: React.FC = () => {
   const { searchQuery, setSearchQuery } = useNavigation();
+  const { products } = useCMS();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'popular' | 'price-low' | 'price-high' | 'rating'>('popular');
 
@@ -19,7 +20,7 @@ export const ProdukPage: React.FC = () => {
   ];
 
   const filteredProducts = useMemo(() => {
-    return INITIAL_PRODUCTS.filter((product) => {
+    return products.filter((product) => {
       // Category filter
       if (selectedCategory !== 'all' && product.category !== selectedCategory) {
         return false;

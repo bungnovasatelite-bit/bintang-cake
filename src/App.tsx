@@ -1,11 +1,13 @@
 import React from 'react';
 import { NavigationProvider, useNavigation } from './context/NavigationContext';
 import { CartProvider } from './context/CartContext';
+import { CMSProvider } from './context/CMSContext';
 import { AppHeader } from './components/layout/AppHeader';
 import { BottomNav } from './components/layout/BottomNav';
 import { MobileContainer } from './components/layout/MobileContainer';
 import { NotificationToast } from './components/feedback/NotificationToast';
 import { DetailProdukModal } from './pages/DetailProdukModal';
+import { CMSModal } from './components/cms/CMSModal';
 import { BerandaPage } from './pages/BerandaPage';
 import { ProdukPage } from './pages/ProdukPage';
 import { KeranjangPage } from './pages/KeranjangPage';
@@ -33,19 +35,22 @@ const MainContent: React.FC = () => {
       {/* 4. Feedback & Modal Overlays */}
       <NotificationToast />
       <DetailProdukModal />
+      <CMSModal />
     </div>
   );
 };
 
 export function App() {
   return (
-    <NavigationProvider>
-      <CartProvider>
-        <MobileContainer>
-          <MainContent />
-        </MobileContainer>
-      </CartProvider>
-    </NavigationProvider>
+    <CMSProvider>
+      <NavigationProvider>
+        <CartProvider>
+          <MobileContainer>
+            <MainContent />
+          </MobileContainer>
+        </CartProvider>
+      </NavigationProvider>
+    </CMSProvider>
   );
 }
 

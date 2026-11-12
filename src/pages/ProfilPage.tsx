@@ -7,14 +7,18 @@ import {
   Headphones,
   Heart,
   Sliders,
-  Store
+  Store,
+  Lock,
+  Settings
 } from 'lucide-react';
 import { INITIAL_USER_PROFILE } from '../data/mockData';
 import { useNavigation } from '../context/NavigationContext';
+import { useCMS } from '../context/CMSContext';
 import { SupabaseStatusCard } from '../components/common/SupabaseStatusCard';
 
 export const ProfilPage: React.FC = () => {
   const { brandVariant, setBrandVariant, isDeviceFrameEnabled, setIsDeviceFrameEnabled } = useNavigation();
+  const { openCMS, isAdminLoggedIn } = useCMS();
   const user = INITIAL_USER_PROFILE;
 
   return (
@@ -187,10 +191,42 @@ export const ProfilPage: React.FC = () => {
         </button>
       </section>
 
-      {/* 5. Supabase Integration Status Card */}
+      {/* 5. Tombol CMS Toko (Kelola & Upload Seluruh Bagian Aplikasi) */}
+      <section className="p-4 rounded-3xl bg-gradient-to-r from-[#4A2810] to-[#2C180C] text-white shadow-float flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-[#D4A373] shrink-0">
+            <Lock className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-serif font-bold text-sm text-[#FAF5EE]">
+                Panel CMS Toko
+              </h3>
+              {isAdminLoggedIn && (
+                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-[#3E6B48] text-white">
+                  Aktif
+                </span>
+              )}
+            </div>
+            <p className="text-[10.5px] text-[#CBB296]">
+              Edit produk, banner hero, promo &amp; upload foto
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={openCMS}
+          className="px-3.5 py-2 rounded-2xl bg-[#FAF5EE] text-[#4A2810] hover:bg-[#FFFDF9] text-xs font-bold shadow-md active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span>Kelola CMS</span>
+        </button>
+      </section>
+
+      {/* 6. Supabase Integration Status Card */}
       <SupabaseStatusCard />
 
-      {/* 6. Version Info */}
+      {/* 7. Version Info */}
       <div className="text-center pt-2 text-[10.5px] text-[#A8988B] space-y-0.5">
         <p>Bintang Cake &amp; Cookies App v1.0.0 (Phase 1: App Shell &amp; Navigasi)</p>
         <p>Built with React + TypeScript + Vite + Tailwind CSS</p>

@@ -13,13 +13,14 @@ import {
   Palette
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
-import { INITIAL_PRODUCTS } from '../data/mockData';
+import { useCMS } from '../context/CMSContext';
 import { ProductCard } from '../components/common/ProductCard';
 
 export const BerandaPage: React.FC = () => {
   const { setActiveTab } = useNavigation();
+  const { products, storeConfig } = useCMS();
 
-  const bestSellers = INITIAL_PRODUCTS.filter((p) => p.badge === 'BEST SELLER').slice(0, 4);
+  const bestSellers = products.filter((p) => p.badge === 'BEST SELLER').slice(0, 4);
 
   const categories = [
     { id: 'cake', label: 'Cake', icon: Cake },
@@ -36,8 +37,8 @@ export const BerandaPage: React.FC = () => {
         {/* Background Image with Dark Vignette Overlay */}
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80"
-            alt="Artisan Chocolate Cake"
+            src={storeConfig.heroImage}
+            alt={storeConfig.heroTitle}
             className="w-full h-full object-cover opacity-40 mix-blend-overlay scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#261408] via-[#3D2314]/80 to-transparent" />
@@ -47,15 +48,15 @@ export const BerandaPage: React.FC = () => {
           {/* Sub badge */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF5EE]/15 backdrop-blur-md border border-[#FAF5EE]/20 text-[#FAF5EE] text-[11px] font-semibold w-fit mb-3">
             <Sparkles className="w-3.5 h-3.5 text-[#EAD1B6]" />
-            <span>PARTNER TO ENJOY YOUR DAY</span>
+            <span>{storeConfig.heroTag}</span>
           </div>
 
           <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-[#FAF5EE] leading-snug">
-            Bintang Cake & Cookies
+            {storeConfig.heroTitle}
           </h2>
 
           <p className="mt-2 text-xs sm:text-sm text-[#E6D3BE] font-normal leading-relaxed max-w-sm">
-            Rayakan setiap kebersamaan berharga dengan kreasi kue lembut dan kue kering mentega Wijsman premium.
+            {storeConfig.heroSubtitle}
           </p>
 
           <div className="mt-5 flex items-center gap-2.5 flex-wrap">
@@ -121,14 +122,13 @@ export const BerandaPage: React.FC = () => {
         <div className="rounded-3xl p-4 bg-gradient-to-r from-[#FDECE8] via-[#FAF0EB] to-[#FCEEE9] border border-[#F5C7B9] flex flex-col justify-between relative overflow-hidden shadow-sm">
           <div className="relative z-10">
             <div className="inline-flex items-center gap-1 text-[10px] font-bold text-[#A2442C] bg-[#FCD7CD] px-2.5 py-0.5 rounded-full mb-2 uppercase tracking-wide">
-              <span>⚡ FLASH SALE</span>
-              <span className="text-[#8B3620] font-normal">• Berakhir 2 hari lagi</span>
+              <span>{storeConfig.promoTag}</span>
             </div>
             <h4 className="font-serif font-bold text-base text-[#3D2314]">
-              Dapatkan Souvenir Cantik
+              {storeConfig.promoTitle}
             </h4>
             <p className="text-xs text-[#7A5844] mt-1 leading-snug">
-              Dapatkan Souvenir Cantik setiap Pembelian sejumlah Rp 750.000
+              {storeConfig.promoSubtitle}
             </p>
           </div>
 

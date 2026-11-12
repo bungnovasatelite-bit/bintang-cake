@@ -1,12 +1,14 @@
 import React from 'react';
-import { ShoppingBag, Search, User } from 'lucide-react';
+import { ShoppingBag, Search, User, ShieldCheck } from 'lucide-react';
 import { useNavigation } from '../../context/NavigationContext';
 import { useCart } from '../../context/CartContext';
+import { useCMS } from '../../context/CMSContext';
 import { BrandLogo } from '../icons/BrandLogo';
 
 export const AppHeader: React.FC = () => {
   const { activeTab, setActiveTab, brandVariant } = useNavigation();
   const { totalItems } = useCart();
+  const { openCMS, isAdminLoggedIn } = useCMS();
 
   // Tab subtext in uppercase matching screenshot
   const tabSubtitleMap: Record<string, string> = {
@@ -78,8 +80,23 @@ export const AppHeader: React.FC = () => {
           {renderBrandText()}
         </button>
 
-        {/* Right: Actions (Search, Cart with Live Badge, Profile) */}
+        {/* Right: Actions (CMS, Search, Cart with Live Badge, Profile) */}
         <div className="flex items-center gap-1 sm:gap-2">
+          {/* Quick CMS Trigger Button */}
+          <button
+            onClick={openCMS}
+            className={`p-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1 ${
+              isAdminLoggedIn
+                ? 'bg-[#4A2810] text-[#FAF5EE] shadow-xs'
+                : 'text-[#8C7A6B] hover:text-[#4A2810] hover:bg-[#F3E8DA]'
+            }`}
+            aria-label="Panel CMS Admin"
+            title="Panel CMS Admin (user: bintang)"
+          >
+            <ShieldCheck className="w-4 h-4 text-[#D4A373]" />
+            <span className="hidden sm:inline text-[10px]">CMS</span>
+          </button>
+
           {/* Search Button -> navigates to Produk / Search */}
           <button
             onClick={() => setActiveTab('produk')}
