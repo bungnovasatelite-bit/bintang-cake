@@ -16,6 +16,7 @@ import {
 } from '../lib/database';
 
 export interface StoreConfig {
+  logoImage?: string;
   heroTag: string;
   heroTitle: string;
   heroSubtitle: string;
@@ -27,9 +28,15 @@ export interface StoreConfig {
   boutiqueAddress: string;
   boutiqueHours: string;
   whatsappNumber: string;
+  // Pengaturan Pembayaran (QRIS & Transfer Bank)
+  qrisImage?: string;
+  qrisCode?: string;
+  bankName: string;
+  bankAccount: string;
 }
 
 const DEFAULT_STORE_CONFIG: StoreConfig = {
+  logoImage: '',
   heroTag: 'PARTNER TO ENJOY YOUR DAY',
   heroTitle: 'Bintang Cake',
   heroSubtitle: 'Rayakan setiap kebersamaan berharga dengan kreasi kue lembut dan kue kering mentega Wijsman premium.',
@@ -41,6 +48,10 @@ const DEFAULT_STORE_CONFIG: StoreConfig = {
   boutiqueAddress: 'Jl. Cikini Raya No. 42, Menteng, Jakarta Pusat',
   boutiqueHours: '09:00 - 20:00 WIB',
   whatsappNumber: '0812-3456-7890',
+  qrisImage: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=400&q=80',
+  qrisCode: 'NMID: ID1020304050607 - Bintang Cake',
+  bankName: 'BCA (Bank Central Asia)',
+  bankAccount: '8210-9876-5432 a/n Bintang Cake',
 };
 
 interface CMSContextType {

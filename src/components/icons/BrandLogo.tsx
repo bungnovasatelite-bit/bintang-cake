@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useCMS } from '../../context/CMSContext';
 
 interface BrandLogoProps {
   className?: string;
@@ -6,6 +7,27 @@ interface BrandLogoProps {
 }
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({ className = 'w-9 h-9', size = 36 }) => {
+  const { storeConfig } = useCMS();
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [storeConfig.logoImage]);
+
+  // Jika admin mengupload logo custom dan tidak error, tampilkan foto logo tersebut
+  if (storeConfig.logoImage && !imgError) {
+    return (
+      <img
+        src={storeConfig.logoImage}
+        alt="Logo Bintang Cake"
+        onError={() => setImgError(true)}
+        style={{ width: size, height: size }}
+        className={`inline-block shrink-0 rounded-full object-cover border border-[#D4A373]/60 shadow-xs ${className}`}
+      />
+    );
+  }
+
+  // Fallback: Ornate SVG seal
   return (
     <svg
       width={size}
@@ -14,7 +36,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({ className = 'w-9 h-9', siz
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={`inline-block shrink-0 ${className}`}
-      aria-label="Logo Bintang Cake & Cookies"
+      aria-label="Logo Bintang Cake"
     >
       <defs>
         <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -62,12 +84,12 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({ className = 'w-9 h-9', siz
 
       {/* Wheat / Ribbon filigree bottom */}
       <path
-        d="M28 78 Q50 88 72 78"
+        d="M32 78 C40 82 45 84 50 84 C55 84 60 82 68 78"
         stroke="#EAD1B6"
         strokeWidth="2"
         strokeLinecap="round"
       />
-      <circle cx="50" cy="84" r="2.5" fill="#E2A669" />
+      <circle cx="50" cy="84" r="2.5" fill="#EAD1B6" />
     </svg>
   );
 };

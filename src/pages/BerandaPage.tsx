@@ -34,14 +34,14 @@ export const BerandaPage: React.FC = () => {
     <div className="space-y-6 pb-6">
       {/* 1. Hero Banner */}
       <section className="relative overflow-hidden rounded-3xl bg-[#3D2314] text-[#FAF5EE] shadow-float mx-1">
-        {/* Background Image with Dark Vignette Overlay */}
+        {/* Background Image with Crisp Lighting & Elegant Warm Vignette */}
         <div className="absolute inset-0 z-0">
           <img
             src={storeConfig.heroImage}
             alt={storeConfig.heroTitle}
-            className="w-full h-full object-cover opacity-40 mix-blend-overlay scale-105"
+            className="w-full h-full object-cover transition-opacity duration-300"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#261408] via-[#3D2314]/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#201107] via-[#201107]/65 to-black/30" />
         </div>
 
         <div className="relative z-10 p-6 flex flex-col justify-end min-h-[300px]">
