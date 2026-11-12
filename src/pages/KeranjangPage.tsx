@@ -4,7 +4,6 @@ import {
   Plus,
   Minus,
   ShoppingBag,
-  Ticket,
   CheckCircle2,
   Store,
   Truck,
@@ -26,8 +25,6 @@ export const KeranjangPage: React.FC = () => {
 
   // Delivery mode state
   const [deliveryMode, setDeliveryMode] = useState<'pickup' | 'courier'>('pickup');
-  const [couponCode, setCouponCode] = useState('BINTANGCOOKIES');
-  const [isCouponApplied, setIsCouponApplied] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<'qris' | 'transfer'>('qris');
   const [customerName, setCustomerName] = useState('Siti Rahmawati');
   const [customerPhone, setCustomerPhone] = useState('0812-3456-7890');
@@ -36,8 +33,7 @@ export const KeranjangPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccessMsg, setOrderSuccessMsg] = useState<string | null>(null);
 
-  const discount = isCouponApplied ? 5000 : 0;
-  const grandTotal = Math.max(0, subtotal - discount);
+  const grandTotal = subtotal;
 
   const handleCheckout = async () => {
     setIsSubmitting(true);
@@ -49,9 +45,8 @@ export const KeranjangPage: React.FC = () => {
         scheduleTime,
         deliveryAddress: deliveryMode === 'pickup' ? 'Ambil di Butik Menteng' : 'Alamat Pelanggan',
         subtotal,
-        discount,
+        discount: 0,
         totalAmount: grandTotal,
-        couponCode: isCouponApplied ? couponCode : undefined,
         paymentMethod,
         items: items.map(item => ({
           productId: item.productId,
@@ -66,7 +61,6 @@ export const KeranjangPage: React.FC = () => {
       if (res.success) {
         setOrderSuccessMsg(`Pesanan berhasil disimpan ke Supabase! ID Pesanan: ${res.orderId?.slice(0, 8)}...`);
       } else {
-        // Fallback info if tables haven't been run yet
         alert(`Koneksi Supabase Aktif!\nInfo: ${res.error}\n\nTips: Jalankan file 'supabase/schema.sql' di SQL Editor Supabase untuk membuat tabel 'orders'.`);
       }
     } finally {
@@ -197,44 +191,7 @@ export const KeranjangPage: React.FC = () => {
         ))}
       </section>
 
-      {/* 3. Voucher & Promo Manis */}
-      <section className="p-4 rounded-3xl bg-[#FFFDFB] border border-[#EFE5D9] shadow-sm space-y-2">
-        <div className="flex items-center gap-2">
-          <Ticket className="w-4 h-4 text-[#8B5E3C]" />
-          <h4 className="text-xs font-bold text-[#3D2314]">
-            Voucher &amp; Promo Manis
-          </h4>
-        </div>
-
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={couponCode}
-            onChange={(e) => setCouponCode(e.target.value)}
-            placeholder="Masukkan kode voucher"
-            className="flex-1 px-3.5 py-2 rounded-2xl bg-[#F8F3EC] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] tracking-wider uppercase focus:outline-none"
-          />
-          <button
-            onClick={() => setIsCouponApplied(!isCouponApplied)}
-            className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all ${
-              isCouponApplied
-                ? 'bg-[#4A2810] text-[#FFFDF9]'
-                : 'bg-[#EAD1B6] text-[#4A2810] hover:bg-[#D4A373]'
-            }`}
-          >
-            {isCouponApplied ? 'Terpasang' : 'Terapkan'}
-          </button>
-        </div>
-
-        {isCouponApplied && (
-          <div className="flex items-center gap-1.5 text-[11px] text-[#2C6E49] font-medium pt-1">
-            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-            <span>Kupon <strong>BINTANGCOOKIES</strong> aktif (Potongan Rp 5.000)</span>
-          </div>
-        )}
-      </section>
-
-      {/* 4. Ringkasan Pembayaran */}
+      {/* 3. Ringkasan Pembayaran */}
       <section className="p-4 rounded-3xl bg-[#FFFDFB] border border-[#EFE5D9] shadow-sm space-y-2.5">
         <h4 className="text-xs font-bold text-[#3D2314]">
           Ringkasan Pembayaran
@@ -244,13 +201,6 @@ export const KeranjangPage: React.FC = () => {
           <div className="flex justify-between">
             <span>Subtotal ({totalItems} Jenis Kue)</span>
             <span className="font-semibold text-[#3D2314]">{formatIDR(subtotal)}</span>
-          </div>
-          <div className="flex justify-between text-[#A03D2A]">
-            <span className="flex items-center gap-1">
-              Diskon Promo
-              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-[#FBE4DD]">MANIS</span>
-            </span>
-            <span className="font-semibold">-{formatIDR(discount)}</span>
           </div>
           <div className="flex justify-between">
             <span>Estimasi Ongkos Kirim</span>

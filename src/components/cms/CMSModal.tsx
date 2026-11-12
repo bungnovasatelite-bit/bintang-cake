@@ -11,11 +11,18 @@ import {
   CheckCircle2,
   Layers,
   Sparkles,
-  Store,
+  ClipboardList,
+  Database,
+  Phone,
+  RefreshCw,
+  Loader2,
+  Clock,
   RotateCcw
 } from 'lucide-react';
 import { useCMS } from '../../context/CMSContext';
 import { Product } from '../../types';
+import { compressImage } from '../../utils/imageCompressor';
+import { testSupabaseConnection, SupabaseHealthCheckResult } from '../../lib/supabase';
 
 export const CMSModal: React.FC = () => {
   const {
@@ -33,6 +40,13 @@ export const CMSModal: React.FC = () => {
     resetToDefault,
     syncNotice,
     isSyncing,
+    orders,
+    refreshOrders,
+    updateOrderStatus,
+    deleteOrder,
+    supabaseUrl,
+    supabaseAnonKey,
+    updateSupabaseCredentials,
   } = useCMS();
 
   // Login form state
@@ -40,12 +54,13 @@ export const CMSModal: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  // CMS Tab state
-  const [activeTab, setActiveTab] = useState<'products' | 'banners' | 'store'>('products');
+  // CMS Tabs: products | orders | banners | config
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'banners' | 'config'>('products');
 
   // Product Editor Modal state
   const [isEditingProduct, setIsEditingProduct] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [isCompressingImg, setIsCompressingImg] = useState(false);
 
   const [formName, setFormName] = useState('');
   const [formCategory, setFormCategory] = useState<'cake' | 'cookies' | 'brownies' | 'hampers' | 'custom'>('cookies');
@@ -57,19 +72,20 @@ export const CMSModal: React.FC = () => {
   const [formImage, setFormImage] = useState<string>('');
   const [formDesc, setFormDesc] = useState<string>('');
 
+  // Orders filter state
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'processing' | 'completed'>('all');
+
   // Banner editor state
   const [heroTag, setHeroTag] = useState(storeConfig.heroTag);
   const [heroTitle, setHeroTitle] = useState(storeConfig.heroTitle);
   const [heroSubtitle, setHeroSubtitle] = useState(storeConfig.heroSubtitle);
   const [heroImage, setHeroImage] = useState(storeConfig.heroImage);
 
-  const [promoTag, setPromoTag] = useState(storeConfig.promoTag);
-  const [promoTitle, setPromoTitle] = useState(storeConfig.promoTitle);
-  const [promoSubtitle, setPromoSubtitle] = useState(storeConfig.promoSubtitle);
-
-  const [waNumber, setWaNumber] = useState(storeConfig.whatsappNumber);
-  const [boutiqueAddress, setBoutiqueAddress] = useState(storeConfig.boutiqueAddress);
-  const [boutiqueHours, setBoutiqueHours] = useState(storeConfig.boutiqueHours);
+  // Supabase config state
+  const [inputUrl, setInputUrl] = useState(supabaseUrl);
+  const [inputKey, setInputKey] = useState(supabaseAnonKey);
+  const [testResult, setTestResult] = useState<SupabaseHealthCheckResult | null>(null);
+  const [isTestingSupabase, setIsTestingSupabase] = useState(false);
 
   if (!isCMSOpen) return null;
 
@@ -110,29 +126,34 @@ export const CMSModal: React.FC = () => {
     setIsEditingProduct(true);
   };
 
-  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload gambar dengan kompresi otomatis agar ukuran kecil dan tidak pernah reset
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setFormImage(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        setIsCompressingImg(true);
+        const compressed = await compressImage(file, 700, 700, 0.75);
+        setFormImage(compressed);
+      } catch (err) {
+        console.error('Gagal kompresi:', err);
+      } finally {
+        setIsCompressingImg(false);
+      }
     }
   };
 
-  const handleHeroImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleHeroImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setHeroImage(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        setIsCompressingImg(true);
+        const compressed = await compressImage(file, 900, 600, 0.75);
+        setHeroImage(compressed);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsCompressingImg(false);
+      }
     }
   };
 
@@ -177,20 +198,25 @@ export const CMSModal: React.FC = () => {
       heroTitle,
       heroSubtitle,
       heroImage,
-      promoTag,
-      promoTitle,
-      promoSubtitle,
     });
   };
 
-  const handleSaveStore = (e: React.FormEvent) => {
+  const handleSaveSupabaseConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateStoreConfig({
-      whatsappNumber: waNumber,
-      boutiqueAddress,
-      boutiqueHours,
-    });
+    updateSupabaseCredentials(inputUrl, inputKey);
+    setIsTestingSupabase(true);
+    try {
+      const res = await testSupabaseConnection();
+      setTestResult(res);
+    } finally {
+      setIsTestingSupabase(false);
+    }
   };
+
+  const filteredOrders = orders.filter((o) => {
+    if (orderStatusFilter === 'all') return true;
+    return o.status === orderStatusFilter;
+  });
 
   return (
     <div
@@ -214,7 +240,7 @@ export const CMSModal: React.FC = () => {
                     Masuk Admin CMS
                   </h2>
                   <p className="text-xs text-[#8C7A6B]">
-                    Panel Kelola Konten &amp; Produk Toko
+                    Panel Kelola Konten &amp; Pesanan Bintang Cake
                   </p>
                 </div>
               </div>
@@ -236,7 +262,7 @@ export const CMSModal: React.FC = () => {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Masukkan username (contoh: bintang)"
+                  placeholder="bintang"
                   className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none focus:border-[#4A2810]"
                   required
                 />
@@ -263,7 +289,7 @@ export const CMSModal: React.FC = () => {
               )}
 
               <div className="p-2.5 rounded-xl bg-[#FFFDF9] border border-[#E8DACB] text-[10.5px] text-[#8C7A6B]">
-                💡 <strong>Kredensial Admin:</strong> User: <code className="font-bold text-[#4A2810]">bintang</code> | Password: <code className="font-bold text-[#4A2810]">nadine13</code>
+                🔑 <strong>User:</strong> <code className="font-bold text-[#4A2810]">bintang</code> | <strong>Password:</strong> <code className="font-bold text-[#4A2810]">nadine13</code>
               </div>
 
               <button
@@ -271,7 +297,7 @@ export const CMSModal: React.FC = () => {
                 className="w-full py-3 rounded-2xl bg-[#4A2810] hover:bg-[#341A08] text-white font-bold text-xs shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-1.5"
               >
                 <Lock className="w-3.5 h-3.5" />
-                Buka Panel CMS
+                Masuk ke Panel CMS
               </button>
             </form>
           </div>
@@ -284,10 +310,10 @@ export const CMSModal: React.FC = () => {
                 <span className="w-2.5 h-2.5 rounded-full bg-[#2C6E49] animate-pulse" />
                 <div>
                   <h3 className="font-serif font-bold text-sm text-[#3D2314] leading-none">
-                    Panel Kelola CMS
+                    Panel CMS Bintang Cake
                   </h3>
                   <p className="text-[10px] text-[#8C7A6B] mt-0.5">
-                    User: <strong>bintang</strong> • Bintang Cake &amp; Cookies
+                    User: <strong>bintang</strong>
                   </p>
                 </div>
               </div>
@@ -320,13 +346,13 @@ export const CMSModal: React.FC = () => {
             )}
 
             {/* CMS Navigation Tabs */}
-            <div className="flex items-center px-4 pt-2 border-b border-[#E8DACB] gap-1 shrink-0 bg-[#FFFDF9]/60">
+            <div className="flex items-center px-3 pt-2 border-b border-[#E8DACB] gap-1 shrink-0 bg-[#FFFDF9]/60 overflow-x-auto no-scrollbar">
               <button
                 onClick={() => {
                   setActiveTab('products');
                   setIsEditingProduct(false);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
                   activeTab === 'products'
                     ? 'border-[#4A2810] text-[#4A2810]'
                     : 'border-transparent text-[#8C7A6B] hover:text-[#3D2314]'
@@ -338,32 +364,48 @@ export const CMSModal: React.FC = () => {
 
               <button
                 onClick={() => {
+                  setActiveTab('orders');
+                  setIsEditingProduct(false);
+                  refreshOrders();
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
+                  activeTab === 'orders'
+                    ? 'border-[#4A2810] text-[#4A2810]'
+                    : 'border-transparent text-[#8C7A6B] hover:text-[#3D2314]'
+                }`}
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                Pesanan ({orders.length})
+              </button>
+
+              <button
+                onClick={() => {
                   setActiveTab('banners');
                   setIsEditingProduct(false);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
                   activeTab === 'banners'
                     ? 'border-[#4A2810] text-[#4A2810]'
                     : 'border-transparent text-[#8C7A6B] hover:text-[#3D2314]'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                Banner &amp; Promo
+                Banner &amp; Teks
               </button>
 
               <button
                 onClick={() => {
-                  setActiveTab('store');
+                  setActiveTab('config');
                   setIsEditingProduct(false);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 transition-all ${
-                  activeTab === 'store'
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap transition-all ${
+                  activeTab === 'config'
                     ? 'border-[#4A2810] text-[#4A2810]'
                     : 'border-transparent text-[#8C7A6B] hover:text-[#3D2314]'
                 }`}
               >
-                <Store className="w-3.5 h-3.5" />
-                Info Butik
+                <Database className="w-3.5 h-3.5" />
+                Konfigurasi Supabase
               </button>
             </div>
 
@@ -388,10 +430,10 @@ export const CMSModal: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* Image Preview & Upload */}
+                      {/* Image Preview & Upload with Compression */}
                       <div>
                         <label className="block text-[11px] font-bold text-[#4A2810] mb-1">
-                          Foto Produk (Upload atau URL)
+                          Foto Produk (Tersimpan Permanen)
                         </label>
                         <div className="flex items-center gap-3">
                           <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#FAF5EE] border border-[#E8DACB] shrink-0">
@@ -405,8 +447,12 @@ export const CMSModal: React.FC = () => {
                           </div>
                           <div className="flex-1 space-y-1.5">
                             <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
-                              <Upload className="w-3.5 h-3.5" />
-                              <span>Pilih File Gambar</span>
+                              {isCompressingImg ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Upload className="w-3.5 h-3.5" />
+                              )}
+                              <span>Pilih File Foto HP/PC</span>
                               <input
                                 type="file"
                                 accept="image/*"
@@ -418,7 +464,7 @@ export const CMSModal: React.FC = () => {
                               type="text"
                               value={formImage}
                               onChange={(e) => setFormImage(e.target.value)}
-                              placeholder="Atau tempel URL gambar (https://...)"
+                              placeholder="Atau tempel URL gambar..."
                               className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] text-[#3D2314] focus:outline-none"
                             />
                           </div>
@@ -474,7 +520,7 @@ export const CMSModal: React.FC = () => {
                         </div>
                         <div>
                           <label className="block text-[11px] font-bold text-[#4A2810] mb-1">
-                            Badge Penanda
+                            Badge
                           </label>
                           <select
                             value={formBadge}
@@ -556,7 +602,7 @@ export const CMSModal: React.FC = () => {
                           disabled={isSyncing}
                           className="flex-1 py-2 rounded-xl bg-[#4A2810] text-white text-xs font-bold shadow-sm hover:bg-[#341A08]"
                         >
-                          {isSyncing ? 'Menyimpan...' : 'Simpan Produk'}
+                          {isSyncing ? 'Menyimpan...' : 'Simpan Perubahan'}
                         </button>
                       </div>
                     </form>
@@ -565,7 +611,7 @@ export const CMSModal: React.FC = () => {
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-[#4A2810]">
-                          Daftar Produk ({products.length} Item)
+                          Katalog ({products.length} Item)
                         </span>
                         <button
                           onClick={openNewProductForm}
@@ -631,10 +677,167 @@ export const CMSModal: React.FC = () => {
                 </div>
               )}
 
-              {/* ===================== TAB 2: BANNERS & PROMO ===================== */}
+              {/* ===================== TAB 2: DAFTAR PESANAN PELANGGAN (KHUSUS ADMIN) ===================== */}
+              {activeTab === 'orders' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-serif font-bold text-sm text-[#3D2314]">
+                        Daftar Pesanan Pelanggan
+                      </h4>
+                      <p className="text-[10px] text-[#8C7A6B]">
+                        Hanya bisa dibuka oleh admin yang terotentikasi
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={refreshOrders}
+                      className="p-1.5 rounded-xl bg-white border border-[#E8DACB] text-[#4A2810] hover:bg-[#FAF5EE] text-xs font-semibold flex items-center gap-1"
+                      title="Muat Ulang Pesanan"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span className="text-[10px]">Refresh</span>
+                    </button>
+                  </div>
+
+                  {/* Filter Status Buttons */}
+                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
+                    {[
+                      { id: 'all', label: 'Semua' },
+                      { id: 'pending', label: 'Pending' },
+                      { id: 'processing', label: 'Diproses' },
+                      { id: 'completed', label: 'Selesai' },
+                    ].map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => setOrderStatusFilter(f.id as any)}
+                        className={`px-3 py-1 rounded-xl text-[10.5px] font-bold whitespace-nowrap transition-all ${
+                          orderStatusFilter === f.id
+                            ? 'bg-[#4A2810] text-white shadow-xs'
+                            : 'bg-white text-[#5C4534] border border-[#E8DACB]'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Order Cards */}
+                  {filteredOrders.length > 0 ? (
+                    <div className="space-y-2.5">
+                      {filteredOrders.map((ord) => {
+                        const statusColors = {
+                          pending: 'bg-[#FFF0D4] text-[#A26510] border-[#F3D79E]',
+                          processing: 'bg-[#E3EFE3] text-[#2C6E49] border-[#C5DEC5]',
+                          completed: 'bg-[#EDE4F7] text-[#5E3589] border-[#D5C2EA]',
+                          cancelled: 'bg-[#FDECE8] text-[#A03D2A] border-[#F5C7B9]',
+                        };
+
+                        return (
+                          <div
+                            key={ord.id}
+                            className="p-3.5 rounded-2xl bg-white border border-[#E8DACB] shadow-xs space-y-2"
+                          >
+                            <div className="flex items-center justify-between border-b border-[#F5EFE6] pb-2">
+                              <div>
+                                <span className="font-bold text-xs text-[#3D2314]">
+                                  #{ord.id}
+                                </span>
+                                <span className="text-[10px] text-[#8C7A6B] block">
+                                  {ord.scheduleTime || 'Pengiriman Standar'}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full border ${
+                                    statusColors[ord.status] || statusColors.pending
+                                  }`}
+                                >
+                                  {ord.status.toUpperCase()}
+                                </span>
+
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`Hapus pesanan #${ord.id}?`)) {
+                                      deleteOrder(ord.id);
+                                    }
+                                  }}
+                                  className="p-1 rounded text-[#8C7A6B] hover:text-[#A03D2A]"
+                                  title="Hapus Pesanan"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Customer info */}
+                            <div className="flex items-center justify-between text-xs">
+                              <div>
+                                <p className="font-bold text-[#3D2314]">{ord.customerName}</p>
+                                <p className="text-[10.5px] text-[#7A6657]">{ord.customerPhone}</p>
+                              </div>
+
+                              <a
+                                href={`https://wa.me/${ord.customerPhone.replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-2.5 py-1 rounded-xl bg-[#E3EFE3] text-[#2C6E49] text-[10.5px] font-bold flex items-center gap-1 hover:bg-[#d2e7d2]"
+                              >
+                                <Phone className="w-3 h-3" />
+                                Chat WA
+                              </a>
+                            </div>
+
+                            {/* Items list */}
+                            <div className="p-2 rounded-xl bg-[#FAF5EE] space-y-1 text-[11px] text-[#5C4534]">
+                              {ord.items.map((it, idx) => (
+                                <div key={idx} className="flex justify-between">
+                                  <span>{it.quantity}x {it.productName} {it.selectedSize ? `(${it.selectedSize})` : ''}</span>
+                                  <span className="font-semibold">Rp {(it.price * it.quantity).toLocaleString('id-ID')}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Total & Status Selector */}
+                            <div className="flex items-center justify-between pt-1 border-t border-[#F5EFE6]">
+                              <div>
+                                <span className="text-[10px] text-[#8C7A6B] block">Total Pesanan</span>
+                                <span className="font-serif font-bold text-xs sm:text-sm text-[#4A2810]">
+                                  Rp {ord.totalAmount.toLocaleString('id-ID')}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-[#8C7A6B]">Ubah:</span>
+                                <select
+                                  value={ord.status}
+                                  onChange={(e) => updateOrderStatus(ord.id, e.target.value as any)}
+                                  className="px-2 py-1 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] font-bold text-[#3D2314] focus:outline-none"
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="processing">Diproses</option>
+                                  <option value="completed">Selesai</option>
+                                  <option value="cancelled">Batal</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-xs text-[#8C7A6B] bg-white rounded-2xl border border-[#E8DACB]">
+                      <Clock className="w-6 h-6 mx-auto mb-1 text-[#CBB296]" />
+                      Belum ada pesanan dengan status &ldquo;{orderStatusFilter}&rdquo;.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ===================== TAB 3: BANNERS & TEKS ===================== */}
               {activeTab === 'banners' && (
                 <form onSubmit={handleSaveBanners} className="space-y-4">
-                  {/* Hero Banner Section */}
                   <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-2.5">
                     <h4 className="font-serif font-bold text-xs text-[#3D2314] flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-[#8B5E3C]" />
@@ -655,7 +858,7 @@ export const CMSModal: React.FC = () => {
 
                     <div>
                       <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Judul Utama (Headline)
+                        Judul Headline Hero
                       </label>
                       <input
                         type="text"
@@ -667,7 +870,7 @@ export const CMSModal: React.FC = () => {
 
                     <div>
                       <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Sub-Judul / Deskripsi Hero
+                        Deskripsi Hero
                       </label>
                       <textarea
                         rows={2}
@@ -679,12 +882,12 @@ export const CMSModal: React.FC = () => {
 
                     <div>
                       <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Foto Background Hero
+                        Foto Hero
                       </label>
                       <div className="flex items-center gap-2">
                         <label className="px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA] shrink-0">
                           <Upload className="w-3 h-3 inline mr-1" />
-                          Upload
+                          Upload Foto
                           <input
                             type="file"
                             accept="image/*"
@@ -703,49 +906,6 @@ export const CMSModal: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Flash Sale Banner Section */}
-                  <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-2.5">
-                    <h4 className="font-serif font-bold text-xs text-[#3D2314]">
-                      Banner Flash Sale Promo
-                    </h4>
-
-                    <div>
-                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Badge Promo
-                      </label>
-                      <input
-                        type="text"
-                        value={promoTag}
-                        onChange={(e) => setPromoTag(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Judul Promo
-                      </label>
-                      <input
-                        type="text"
-                        value={promoTitle}
-                        onChange={(e) => setPromoTitle(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Keterangan Promo
-                      </label>
-                      <input
-                        type="text"
-                        value={promoSubtitle}
-                        onChange={(e) => setPromoSubtitle(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
                   <button
                     type="submit"
                     className="w-full py-3 rounded-2xl bg-[#4A2810] text-white font-bold text-xs shadow-md hover:bg-[#341A08]"
@@ -755,71 +915,94 @@ export const CMSModal: React.FC = () => {
                 </form>
               )}
 
-              {/* ===================== TAB 3: INFO BUTIK ===================== */}
-              {activeTab === 'store' && (
-                <form onSubmit={handleSaveStore} className="space-y-4">
+              {/* ===================== TAB 4: KONFIGURASI SUPABASE ===================== */}
+              {activeTab === 'config' && (
+                <form onSubmit={handleSaveSupabaseConfig} className="space-y-4">
                   <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-3">
-                    <h4 className="font-serif font-bold text-xs text-[#3D2314] flex items-center gap-1.5">
-                      <Store className="w-3.5 h-3.5 text-[#8B5E3C]" />
-                      Kontak &amp; Lokasi Butik
-                    </h4>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-[#FAF5EE] text-[#4A2810] flex items-center justify-center">
+                        <Database className="w-4 h-4 text-[#8B5E3C]" />
+                      </div>
+                      <div>
+                        <h4 className="font-serif font-bold text-xs text-[#3D2314]">
+                          Kredensial Supabase
+                        </h4>
+                        <p className="text-[10px] text-[#8C7A6B]">
+                          Atur koneksi database langsung dari panel ini
+                        </p>
+                      </div>
+                    </div>
 
                     <div>
                       <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Nomor WhatsApp Admin CS
+                        Supabase Project URL
                       </label>
                       <input
                         type="text"
-                        value={waNumber}
-                        onChange={(e) => setWaNumber(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none"
+                        value={inputUrl}
+                        onChange={(e) => setInputUrl(e.target.value)}
+                        placeholder="https://xyz.supabase.co"
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-mono text-[#3D2314] focus:outline-none"
+                        required
                       />
                     </div>
 
                     <div>
                       <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Alamat Butik Utama
+                        Supabase Anon / Public Key
                       </label>
-                      <input
-                        type="text"
-                        value={boutiqueAddress}
-                        onChange={(e) => setBoutiqueAddress(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none"
+                      <textarea
+                        rows={3}
+                        value={inputKey}
+                        onChange={(e) => setInputKey(e.target.value)}
+                        placeholder="eyJhbGciOiJIUzI1NiIsIn..."
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-mono text-[#3D2314] focus:outline-none resize-none"
+                        required
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Jam Operasional Butik
-                      </label>
-                      <input
-                        type="text"
-                        value={boutiqueHours}
-                        onChange={(e) => setBoutiqueHours(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none"
-                      />
-                    </div>
+                    {testResult && (
+                      <div className={`p-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${
+                        testResult.isConnected
+                          ? 'bg-[#E3EFE3] text-[#2C6E49] border border-[#C5DEC5]'
+                          : 'bg-[#FDECE8] text-[#A03D2A] border border-[#F5C7B9]'
+                      }`}>
+                        {testResult.isConnected ? <CheckCircle2 className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                        <span>{testResult.message} {testResult.latencyMs ? `(${testResult.latencyMs}ms)` : ''}</span>
+                      </div>
+                    )}
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-3 rounded-2xl bg-[#4A2810] text-white font-bold text-xs shadow-md hover:bg-[#341A08]"
+                    disabled={isTestingSupabase}
+                    className="w-full py-3 rounded-2xl bg-[#4A2810] text-white font-bold text-xs shadow-md hover:bg-[#341A08] flex items-center justify-center gap-1.5"
                   >
-                    Simpan Informasi Butik
+                    {isTestingSupabase ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Menguji &amp; Menyimpan...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Simpan &amp; Uji Koneksi Supabase</span>
+                      </>
+                    )}
                   </button>
 
                   <div className="pt-2 border-t border-[#E8DACB]">
                     <button
                       type="button"
                       onClick={() => {
-                        if (confirm('Kembalikan semua data produk dan banner ke pengaturan awal?')) {
+                        if (confirm('Kembalikan semua data ke pengaturan awal?')) {
                           resetToDefault();
                         }
                       }}
-                      className="w-full py-2.5 rounded-2xl bg-[#FAF5EE] border border-[#E8DACB] text-[#A03D2A] text-xs font-bold hover:bg-[#FDECE8] flex items-center justify-center gap-1.5"
+                      className="w-full py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[#A03D2A] text-xs font-bold hover:bg-[#FDECE8] flex items-center justify-center gap-1.5"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
-                      Reset Data ke Standar Awal
+                      Reset Seluruh Data ke Bawaan
                     </button>
                   </div>
                 </form>

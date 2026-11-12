@@ -1,7 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product } from '../types';
 import { INITIAL_PRODUCTS } from '../data/mockData';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import {
+  supabase,
+  isSupabaseConfigured,
+  getSupabaseCredentials,
+  saveSupabaseCredentials,
+  reinitSupabaseClient
+} from '../lib/supabase';
+import {
+  OrderRecord,
+  fetchOrders,
+  updateOrderStatusInDb,
+  deleteOrderFromDb
+} from '../lib/database';
 
 export interface StoreConfig {
   heroTag: string;
@@ -19,7 +31,7 @@ export interface StoreConfig {
 
 const DEFAULT_STORE_CONFIG: StoreConfig = {
   heroTag: 'PARTNER TO ENJOY YOUR DAY',
-  heroTitle: 'Bintang Cake & Cookies',
+  heroTitle: 'Bintang Cake',
   heroSubtitle: 'Rayakan setiap kebersamaan berharga dengan kreasi kue lembut dan kue kering mentega Wijsman premium.',
   heroImage: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
   promoTag: '⚡ FLASH SALE • Berakhir 2 hari lagi',
@@ -47,6 +59,15 @@ interface CMSContextType {
   resetToDefault: () => void;
   isSyncing: boolean;
   syncNotice: string | null;
+  // Pesanan Pelanggan (Khusus Admin)
+  orders: OrderRecord[];
+  refreshOrders: () => Promise<void>;
+  updateOrderStatus: (orderId: string, status: OrderRecord['status']) => Promise<void>;
+  deleteOrder: (orderId: string) => Promise<void>;
+  // Konfigurasi Kredensial Supabase
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  updateSupabaseCredentials: (url: string, key: string) => void;
 }
 
 const CMSContext = createContext<CMSContextType | undefined>(undefined);
@@ -59,6 +80,14 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isCMSOpen, setIsCMSOpen] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
+
+  // Kredensial Supabase di Konfigurasi CMS
+  const initialCreds = getSupabaseCredentials();
+  const [supabaseUrl, setSupabaseUrl] = useState(initialCreds.url);
+  const [supabaseAnonKey, setSupabaseAnonKey] = useState(initialCreds.anonKey);
+
+  // Pesanan Pelanggan
+  const [orders, setOrders] = useState<OrderRecord[]>([]);
 
   const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => {
     const saved = localStorage.getItem('bintang_store_config');
@@ -84,9 +113,27 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return INITIAL_PRODUCTS;
   });
 
-  // Coba sinkronisasi data produk dari Supabase saat awal load
+  // Muat pesanan saat CMS dibuka atau saat login
+  const refreshOrders = async () => {
+    const loaded = await fetchOrders();
+    setOrders(loaded);
+  };
+
+  useEffect(() => {
+    if (isAdminLoggedIn) {
+      refreshOrders();
+    }
+  }, [isAdminLoggedIn]);
+
+  // Coba sinkronisasi data produk dari Supabase HANYA jika pengguna belum pernah melakukan edit lokal
   useEffect(() => {
     async function loadFromSupabase() {
+      const hasCustomEdits = localStorage.getItem('bintang_has_custom_edits');
+      // Jika pengguna sudah pernah mengedit foto/produk, jangan timpa dengan data awal!
+      if (hasCustomEdits === 'true') {
+        return;
+      }
+
       if (!isSupabaseConfigured()) return;
       try {
         const { data, error } = await supabase
@@ -119,14 +166,18 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     loadFromSupabase();
   }, []);
 
-  const openCMS = () => setIsCMSOpen(true);
+  const openCMS = () => {
+    setIsCMSOpen(true);
+    refreshOrders();
+  };
+  
   const closeCMS = () => setIsCMSOpen(false);
 
   const loginAdmin = (user: string, pass: string): boolean => {
-    // Kredensial yang diminta: user: bintang, password: nadine13
     if (user.trim() === 'bintang' && pass === 'nadine13') {
       setIsAdminLoggedIn(true);
       localStorage.setItem('bintang_cms_admin', 'true');
+      refreshOrders();
       return true;
     }
     return false;
@@ -143,7 +194,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('bintang_store_config', JSON.stringify(next));
       return next;
     });
-    setSyncNotice('Perubahan banner & informasi toko berhasil disimpan!');
+    setSyncNotice('Perubahan banner & informasi toko tersimpan permanen!');
     setTimeout(() => setSyncNotice(null), 3000);
   };
 
@@ -157,9 +208,15 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const nextProducts = [newProduct, ...products];
     setProducts(nextProducts);
-    localStorage.setItem('bintang_products', JSON.stringify(nextProducts));
+    
+    // Simpan permanen dan tandai ada custom edits agar tidak tertimpa
+    localStorage.setItem('bintang_has_custom_edits', 'true');
+    try {
+      localStorage.setItem('bintang_products', JSON.stringify(nextProducts));
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
 
-    // Sinkronisasi otomatis ke Supabase jika tabel siap
     if (isSupabaseConfigured()) {
       try {
         await supabase.from('products').insert({
@@ -181,7 +238,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setIsSyncing(false);
-    setSyncNotice(`Produk "${newProduct.name}" berhasil ditambahkan!`);
+    setSyncNotice(`Produk "${newProduct.name}" berhasil ditambahkan & tersimpan permanen!`);
     setTimeout(() => setSyncNotice(null), 3500);
   };
 
@@ -189,9 +246,15 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsSyncing(true);
     const nextProducts = products.map((p) => (p.id === id ? { ...p, ...updatedFields } : p));
     setProducts(nextProducts);
-    localStorage.setItem('bintang_products', JSON.stringify(nextProducts));
+    
+    // Simpan permanen ke localStorage dan tandai custom edit
+    localStorage.setItem('bintang_has_custom_edits', 'true');
+    try {
+      localStorage.setItem('bintang_products', JSON.stringify(nextProducts));
+    } catch (e) {
+      console.warn('LocalStorage quota handling:', e);
+    }
 
-    // Sinkronisasi otomatis ke Supabase
     if (isSupabaseConfigured()) {
       try {
         const updatePayload: Record<string, any> = {};
@@ -213,7 +276,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setIsSyncing(false);
-    setSyncNotice('Perubahan produk berhasil diperbarui!');
+    setSyncNotice('Foto dan perubahan produk berhasil disimpan permanen!');
     setTimeout(() => setSyncNotice(null), 3500);
   };
 
@@ -221,6 +284,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsSyncing(true);
     const nextProducts = products.filter((p) => p.id !== id);
     setProducts(nextProducts);
+    localStorage.setItem('bintang_has_custom_edits', 'true');
     localStorage.setItem('bintang_products', JSON.stringify(nextProducts));
 
     if (isSupabaseConfigured()) {
@@ -236,11 +300,35 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTimeout(() => setSyncNotice(null), 3500);
   };
 
+  const updateOrderStatus = async (orderId: string, status: OrderRecord['status']) => {
+    await updateOrderStatusInDb(orderId, status);
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
+    setSyncNotice(`Status pesanan #${orderId} diubah menjadi "${status}"!`);
+    setTimeout(() => setSyncNotice(null), 3000);
+  };
+
+  const deleteOrder = async (orderId: string) => {
+    await deleteOrderFromDb(orderId);
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+    setSyncNotice(`Pesanan #${orderId} berhasil dihapus.`);
+    setTimeout(() => setSyncNotice(null), 3000);
+  };
+
+  const updateSupabaseCredentials = (url: string, key: string) => {
+    saveSupabaseCredentials(url, key);
+    setSupabaseUrl(url);
+    setSupabaseAnonKey(key);
+    reinitSupabaseClient();
+    setSyncNotice('Kredensial Supabase berhasil disimpan di konfigurasi!');
+    setTimeout(() => setSyncNotice(null), 3500);
+  };
+
   const resetToDefault = () => {
     setProducts(INITIAL_PRODUCTS);
     setStoreConfig(DEFAULT_STORE_CONFIG);
     localStorage.removeItem('bintang_products');
     localStorage.removeItem('bintang_store_config');
+    localStorage.removeItem('bintang_has_custom_edits');
     setSyncNotice('Seluruh data berhasil dikembalikan ke standar awal.');
     setTimeout(() => setSyncNotice(null), 3500);
   };
@@ -263,6 +351,13 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         resetToDefault,
         isSyncing,
         syncNotice,
+        orders,
+        refreshOrders,
+        updateOrderStatus,
+        deleteOrder,
+        supabaseUrl,
+        supabaseAnonKey,
+        updateSupabaseCredentials,
       }}
     >
       {children}

@@ -1,59 +1,40 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-/**
- * Validasi keamanan: Pastikan service_role key tidak digunakan di frontend.
- */
-function isServiceRoleKey(key?: string): boolean {
-  if (!key) return false;
-  // Memeriksa jika ada indikasi nama atau payload service_role
-  if (key.toLowerCase().includes('service_role')) return true;
-  try {
-    const parts = key.split('.');
-    if (parts.length === 3) {
-      const payload = JSON.parse(atob(parts[1]));
-      if (payload.role === 'service_role') return true;
-    }
-  } catch {
-    // Abaikan error parsing jika bukan format JWT
-  }
-  return false;
+export function getSupabaseCredentials(): { url: string; anonKey: string } {
+  const savedUrl = localStorage.getItem('bintang_supabase_url');
+  const savedKey = localStorage.getItem('bintang_supabase_anon_key');
+  
+  const url = savedUrl || import.meta.env.VITE_SUPABASE_URL || '';
+  const anonKey = savedKey || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  
+  return { url, anonKey };
 }
 
-if (isServiceRoleKey(supabaseAnonKey)) {
-  console.error(
-    '🚨 [SECURITY WARNING] Terdeteksi service_role key di VITE_SUPABASE_ANON_KEY! ' +
-    'Service role key memiliki akses penuh melewati Row Level Security (RLS) dan TIDAK BOLEH ' +
-    'ditaruh di aplikasi frontend client. Harap segera ganti dengan anon/public key di file .env.'
-  );
+export function saveSupabaseCredentials(url: string, anonKey: string): void {
+  localStorage.setItem('bintang_supabase_url', url.trim());
+  localStorage.setItem('bintang_supabase_anon_key', anonKey.trim());
 }
 
-/**
- * Memeriksa apakah kredensial Supabase sudah dikonfigurasi dengan benar di environment variables.
- */
-export const isSupabaseConfigured = (): boolean => {
+export function isSupabaseConfigured(): boolean {
+  const { url, anonKey } = getSupabaseCredentials();
   return Boolean(
-    supabaseUrl &&
-    supabaseAnonKey &&
-    supabaseUrl.trim() !== '' &&
-    supabaseAnonKey.trim() !== '' &&
-    !supabaseUrl.includes('your-project-id') &&
-    !supabaseAnonKey.includes('...')
+    url &&
+    anonKey &&
+    url.trim() !== '' &&
+    anonKey.trim() !== '' &&
+    !url.includes('your-project-id') &&
+    !anonKey.includes('...')
   );
-};
+}
 
-/**
- * Inisialisasi Supabase Client.
- * Menggunakan fallback yang aman jika env belum diatur agar aplikasi tidak crash saat pertama kali dibuka.
- */
 const fallbackUrl = 'https://placeholder.supabase.co';
 const fallbackKey = 'placeholder-anon-key';
 
-export const supabase: SupabaseClient = createClient(
-  isSupabaseConfigured() ? supabaseUrl : fallbackUrl,
-  isSupabaseConfigured() ? supabaseAnonKey : fallbackKey,
+const { url: currentUrl, anonKey: currentKey } = getSupabaseCredentials();
+
+export let supabase: SupabaseClient = createClient(
+  isSupabaseConfigured() ? currentUrl : fallbackUrl,
+  isSupabaseConfigured() ? currentKey : fallbackKey,
   {
     auth: {
       persistSession: true,
@@ -63,6 +44,22 @@ export const supabase: SupabaseClient = createClient(
   }
 );
 
+export function reinitSupabaseClient(): SupabaseClient {
+  const { url, anonKey } = getSupabaseCredentials();
+  supabase = createClient(
+    isSupabaseConfigured() ? url : fallbackUrl,
+    isSupabaseConfigured() ? anonKey : fallbackKey,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    }
+  );
+  return supabase;
+}
+
 export interface SupabaseHealthCheckResult {
   isConfigured: boolean;
   isConnected: boolean;
@@ -71,42 +68,31 @@ export interface SupabaseHealthCheckResult {
   latencyMs?: number;
 }
 
-/**
- * Menguji koneksi ke Supabase tanpa membuat tabel atau query ke database tabel.
- * Menggunakan pemeriksaan session auth bawaan Supabase client untuk menguji konektivitas endpoint.
- */
 export async function testSupabaseConnection(): Promise<SupabaseHealthCheckResult> {
+  const { url } = getSupabaseCredentials();
+  
   if (!isSupabaseConfigured()) {
     return {
       isConfigured: false,
       isConnected: false,
-      message: 'Kredensial Supabase belum diisi pada file .env (VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY).',
-      url: supabaseUrl || undefined,
-    };
-  }
-
-  if (isServiceRoleKey(supabaseAnonKey)) {
-    return {
-      isConfigured: false,
-      isConnected: false,
-      message: 'Keamanan ditolak: service_role key terdeteksi. Gunakan anon public key.',
-      url: supabaseUrl,
+      message: 'Kredensial Supabase belum diisi (URL & Anon Key).',
+      url: url || undefined,
     };
   }
 
   const startTime = performance.now();
 
   try {
-    // Uji koneksi ringan ke endpoint Supabase Auth (tidak memerlukan tabel database)
-    const { error } = await supabase.auth.getSession();
+    const client = reinitSupabaseClient();
+    const { error } = await client.auth.getSession();
     const latencyMs = Math.round(performance.now() - startTime);
 
     if (error) {
       return {
         isConfigured: true,
         isConnected: false,
-        message: `Gagal terhubung ke Supabase: ${error.message}`,
-        url: supabaseUrl,
+        message: `Gagal terhubung: ${error.message}`,
+        url,
         latencyMs,
       };
     }
@@ -115,7 +101,7 @@ export async function testSupabaseConnection(): Promise<SupabaseHealthCheckResul
       isConfigured: true,
       isConnected: true,
       message: 'Berhasil terhubung ke Supabase!',
-      url: supabaseUrl,
+      url,
       latencyMs,
     };
   } catch (err: unknown) {
@@ -124,7 +110,7 @@ export async function testSupabaseConnection(): Promise<SupabaseHealthCheckResul
       isConfigured: true,
       isConnected: false,
       message: `Error koneksi: ${errorMsg}`,
-      url: supabaseUrl,
+      url,
       latencyMs: Math.round(performance.now() - startTime),
     };
   }

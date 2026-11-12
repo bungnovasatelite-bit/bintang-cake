@@ -6,7 +6,7 @@ import { useCMS } from '../../context/CMSContext';
 import { BrandLogo } from '../icons/BrandLogo';
 
 export const AppHeader: React.FC = () => {
-  const { activeTab, setActiveTab, brandVariant } = useNavigation();
+  const { activeTab, setActiveTab } = useNavigation();
   const { totalItems } = useCart();
   const { openCMS, isAdminLoggedIn } = useCMS();
 
@@ -20,47 +20,14 @@ export const AppHeader: React.FC = () => {
 
   const currentSubtitle = tabSubtitleMap[activeTab] || 'BERANDA';
 
-  // Branding text based on user requirements:
-  // Prompt says: "Logo dan nama brand TOKOKU di kiri" and "aplikasi bernama Bintang Cake & Cookies"
+  // Tampilan brand header hanya "Bintang Cake" sesuai permintaan
   const renderBrandText = () => {
-    if (brandVariant === 'tokoku') {
-      return (
-        <div>
-          <h1 className="font-serif font-bold text-base md:text-lg text-[#3D2314] tracking-tight leading-tight">
-            TOKOKU
-          </h1>
-          <p className="text-[10px] tracking-widest font-semibold text-[#8B6244] uppercase">
-            {currentSubtitle}
-          </p>
-        </div>
-      );
-    }
-
-    if (brandVariant === 'bintang') {
-      return (
-        <div>
-          <h1 className="font-serif font-bold text-base md:text-lg text-[#3D2314] tracking-tight leading-tight">
-            Bintang Cake & Cookies
-          </h1>
-          <p className="text-[10px] tracking-widest font-semibold text-[#8B6244] uppercase">
-            {currentSubtitle}
-          </p>
-        </div>
-      );
-    }
-
-    // Default: Best of both worlds - "Bintang Cake & Cookies" with TOKOKU brand tag
     return (
       <div className="flex flex-col">
-        <div className="flex items-center gap-1.5">
-          <h1 className="font-serif font-bold text-[15px] sm:text-base text-[#3D2314] tracking-tight leading-none whitespace-nowrap">
-            Bintang Cake & Cookies
-          </h1>
-          <span className="hidden sm:inline-block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#EAD1B6]/60 text-[#4A2810]">
-            TOKOKU
-          </span>
-        </div>
-        <p className="text-[10px] tracking-widest font-bold text-[#8B6244] uppercase mt-0.5">
+        <h1 className="font-serif font-bold text-base sm:text-lg text-[#3D2314] tracking-tight leading-none whitespace-nowrap">
+          Bintang Cake
+        </h1>
+        <p className="text-[10px] tracking-widest font-bold text-[#8B6244] uppercase mt-1">
           {currentSubtitle}
         </p>
       </div>

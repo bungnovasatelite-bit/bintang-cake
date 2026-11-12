@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, CheckCircle2, AlertCircle, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Database, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { testSupabaseConnection, isSupabaseConfigured, SupabaseHealthCheckResult } from '../../lib/supabase';
 
 export const SupabaseStatusCard: React.FC = () => {
@@ -88,17 +88,6 @@ export const SupabaseStatusCard: React.FC = () => {
             URL: {status.url}
           </div>
         )}
-      </div>
-
-      {/* Security Best Practice Notice */}
-      <div className="flex items-start gap-2 p-2.5 rounded-2xl bg-[#FFF8F2] border border-[#F5DECC] text-[10.5px] text-[#8C5E3C] leading-snug">
-        <ShieldAlert className="w-4 h-4 shrink-0 text-[#B85D43] mt-0.5" />
-        <div>
-          <strong className="text-[#3D2314]">Catatan Keamanan:</strong> Gunakan hanya{' '}
-          <code className="px-1 py-0.5 bg-white/90 rounded text-[10px] font-mono text-[#A03D2A]">anon / publishable key</code>.{' '}
-          Jangan pernah meletakkan <code className="px-1 py-0.5 bg-white/90 rounded text-[10px] font-mono text-[#A03D2A]">service_role</code>{' '}
-          di frontend karena akan membocorkan akses database penuh.
-        </div>
       </div>
     </section>
   );
