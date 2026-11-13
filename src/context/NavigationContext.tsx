@@ -9,6 +9,8 @@ interface NavigationContextType {
   closeProductDetail: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  selectedCategory: string;
+  setSelectedCategory: (cat: string) => void;
   brandVariant: 'tokoku-bintang' | 'bintang' | 'tokoku';
   setBrandVariant: (variant: 'tokoku-bintang' | 'bintang' | 'tokoku') => void;
   isDeviceFrameEnabled: boolean;
@@ -21,6 +23,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [activeTab, setActiveTab] = useState<NavTab>('beranda');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [brandVariant, setBrandVariant] = useState<'tokoku-bintang' | 'bintang' | 'tokoku'>('tokoku-bintang');
   const [isDeviceFrameEnabled, setIsDeviceFrameEnabled] = useState<boolean>(false);
 
@@ -42,6 +45,8 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         closeProductDetail,
         searchQuery,
         setSearchQuery,
+        selectedCategory,
+        setSelectedCategory,
         brandVariant,
         setBrandVariant,
         isDeviceFrameEnabled,

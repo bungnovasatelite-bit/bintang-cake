@@ -17,7 +17,7 @@ import { useCMS } from '../context/CMSContext';
 import { ProductCard } from '../components/common/ProductCard';
 
 export const BerandaPage: React.FC = () => {
-  const { setActiveTab } = useNavigation();
+  const { setActiveTab, setSelectedCategory } = useNavigation();
   const { products, storeConfig } = useCMS();
 
   const bestSellers = products.filter((p) => p.badge === 'BEST SELLER').slice(0, 4);
@@ -102,7 +102,10 @@ export const BerandaPage: React.FC = () => {
             return (
               <button
                 key={cat.id}
-                onClick={() => setActiveTab('produk')}
+                onClick={() => {
+                  setSelectedCategory(cat.id);
+                  setActiveTab('produk');
+                }}
                 className="flex flex-col items-center p-2.5 rounded-2xl bg-[#FFFDFB] border border-[#EFE5D9] shadow-sm hover:shadow-md hover:border-[#D4A373] active:scale-95 transition-all group"
               >
                 <div className="w-10 h-10 rounded-xl bg-[#FAF5EE] text-[#4A2810] flex items-center justify-center group-hover:bg-[#4A2810] group-hover:text-[#FFFDFB] transition-colors">

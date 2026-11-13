@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Trash2,
   Plus,
@@ -8,6 +8,7 @@ import {
   Store,
   Truck,
   Calendar,
+  Clock,
   QrCode,
   Building2,
   ArrowRight,
@@ -15,7 +16,8 @@ import {
   Copy,
   Check,
   AlertCircle,
-  MessageCircle
+  MessageCircle,
+  CalendarDays
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useNavigation } from '../context/NavigationContext';
@@ -34,6 +36,11 @@ export const KeranjangPage: React.FC = () => {
   // Calon pembeli selalu mulai dari kosong sehingga mengisi data masing-masing
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+
+  // Jadwal interaktif dengan tanggal & slot waktu otomatis
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [pickedDate, setPickedDate] = useState('');
+  const [pickedTimeSlot, setPickedTimeSlot] = useState('10:00 - 13:00 (Pagi)');
   const [scheduleTime, setScheduleTime] = useState('');
 
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -42,6 +49,38 @@ export const KeranjangPage: React.FC = () => {
   const [isCopied, setIsCopied] = useState(false);
 
   const grandTotal = subtotal;
+
+  // Helper format tanggal Indonesia
+  const formatDateIndo = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Set tanggal cepat (Hari Ini, Besok, Lusa)
+  const setQuickDate = (daysAhead: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysAhead);
+    const iso = d.toISOString().split('T')[0];
+    setPickedDate(iso);
+  };
+
+  // Sinkronkan scheduleTime saat pickedDate atau pickedTimeSlot berubah
+  useEffect(() => {
+    if (pickedDate) {
+      const formatted = `${formatDateIndo(pickedDate)} • ${pickedTimeSlot}`;
+      setScheduleTime(formatted);
+    }
+  }, [pickedDate, pickedTimeSlot]);
 
   const handleCopyAccount = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -63,12 +102,14 @@ export const KeranjangPage: React.FC = () => {
     setValidationError(null);
     setIsSubmitting(true);
 
+    const finalSchedule = scheduleTime.trim() || (deliveryMode === 'pickup' ? 'Ambil di Toko' : 'Pengiriman Standar');
+
     try {
       const res = await pushOrderToSupabase({
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         deliveryMode,
-        scheduleTime: scheduleTime.trim() || (deliveryMode === 'pickup' ? 'Ambil di Toko' : 'Pengiriman Standar'),
+        scheduleTime: finalSchedule,
         deliveryAddress: deliveryMode === 'pickup' ? 'Ambil di Toko Bintang Cake' : 'Alamat Pengiriman Pelanggan',
         subtotal,
         discount: 0,
@@ -107,11 +148,13 @@ export const KeranjangPage: React.FC = () => {
 
   const formatIDR = (val: number) => 'Rp ' + val.toLocaleString('id-ID');
 
+  // Nomor WhatsApp tujuan konfirmasi resmi: 0821-5873-9760
+  const officialWaNumber = '6282158739760';
+
   // Jika pesanan telah berhasil
   if (orderSuccessMsg) {
-    const waPhone = storeConfig.whatsappNumber ? storeConfig.whatsappNumber.replace(/[^0-9]/g, '') : '6281234567890';
     const waText = encodeURIComponent(
-      `Halo Bintang Cake, saya sudah memesan atas nama *${customerName}* dengan No Pesanan *#${orderSuccessMsg.id}*. Mohon konfirmasinya ya!`
+      `Halo Bintang Cake, saya sudah memesan atas nama *${customerName}* (WA: ${customerPhone}) dengan No Pesanan *#${orderSuccessMsg.id}*.\nJadwal: ${scheduleTime || 'Segera'}\nTotal: ${formatIDR(grandTotal)}\nMohon konfirmasinya ya!`
     );
 
     return (
@@ -142,6 +185,10 @@ export const KeranjangPage: React.FC = () => {
             <span className="text-[#8C7A6B]">WhatsApp:</span>
             <span className="font-semibold text-[#3D2314]">{customerPhone}</span>
           </div>
+          <div className="flex justify-between border-b border-[#F5EFE6] pb-2">
+            <span className="text-[#8C7A6B]">Jadwal:</span>
+            <span className="font-semibold text-[#3D2314]">{scheduleTime || 'Pengiriman Standar'}</span>
+          </div>
           <div className="flex justify-between">
             <span className="text-[#8C7A6B]">Metode:</span>
             <span className="font-semibold text-[#3D2314] uppercase">{paymentMethod === 'qris' ? 'QRIS Instant' : 'Transfer Bank'}</span>
@@ -150,13 +197,13 @@ export const KeranjangPage: React.FC = () => {
 
         <div className="flex flex-col gap-2.5 max-w-sm mx-auto pt-2">
           <a
-            href={`https://wa.me/${waPhone}?text=${waText}`}
+            href={`https://wa.me/${officialWaNumber}?text=${waText}`}
             target="_blank"
             rel="noreferrer"
             className="w-full py-3.5 rounded-2xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2"
           >
             <MessageCircle className="w-4 h-4" />
-            Konfirmasi ke WhatsApp Toko
+            Konfirmasi ke WhatsApp (0821-5873-9760)
           </a>
 
           <button
@@ -164,10 +211,11 @@ export const KeranjangPage: React.FC = () => {
               setOrderSuccessMsg(null);
               setCustomerName('');
               setCustomerPhone('');
+              setPickedDate('');
               setScheduleTime('');
               setActiveTab('produk');
             }}
-            className="w-full py-3 rounded-2xl bg-[#F5EFE6] hover:bg-[#EFE5D9] text-[#4A2810] font-bold text-xs transition-colors"
+            className="w-full py-3 rounded-2xl bg-[#F5EFE6] hover:bg-[#EFE5D9] text-[#4A2810] font-bold text-xs transition-colors cursor-pointer"
           >
             Pesan Kue Lainnya
           </button>
@@ -190,7 +238,7 @@ export const KeranjangPage: React.FC = () => {
         </p>
         <button
           onClick={() => setActiveTab('produk')}
-          className="px-6 py-3 rounded-2xl bg-[#4A2810] text-[#FFFDF9] font-bold text-sm shadow-md hover:bg-[#341A08] transition-all"
+          className="px-6 py-3 rounded-2xl bg-[#4A2810] text-[#FFFDF9] font-bold text-sm shadow-md hover:bg-[#341A08] transition-all cursor-pointer"
         >
           Lihat Katalog Produk
         </button>
@@ -259,7 +307,7 @@ export const KeranjangPage: React.FC = () => {
 
                 <button
                   onClick={() => removeFromCart(item.id)}
-                  className="text-[#A8988B] hover:text-[#A03D2A] p-1 transition-colors"
+                  className="text-[#A8988B] hover:text-[#A03D2A] p-1 transition-colors cursor-pointer"
                   aria-label={`Hapus ${item.name}`}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -275,7 +323,7 @@ export const KeranjangPage: React.FC = () => {
                 <div className="flex items-center bg-[#F5EFE6] rounded-xl px-1.5 py-0.5 gap-2">
                   <button
                     onClick={() => updateQuantity(item.id, -1)}
-                    className="w-6 h-6 rounded-lg bg-white/70 hover:bg-white text-[#4A2810] flex items-center justify-center transition-colors"
+                    className="w-6 h-6 rounded-lg bg-white/70 hover:bg-white text-[#4A2810] flex items-center justify-center transition-colors cursor-pointer"
                     aria-label="Kurangi jumlah"
                   >
                     <Minus className="w-3 h-3 stroke-[2.5]" />
@@ -285,7 +333,7 @@ export const KeranjangPage: React.FC = () => {
                   </span>
                   <button
                     onClick={() => updateQuantity(item.id, 1)}
-                    className="w-6 h-6 rounded-lg bg-white/70 hover:bg-white text-[#4A2810] flex items-center justify-center transition-colors"
+                    className="w-6 h-6 rounded-lg bg-white/70 hover:bg-white text-[#4A2810] flex items-center justify-center transition-colors cursor-pointer"
                     aria-label="Tambah jumlah"
                   >
                     <Plus className="w-3 h-3 stroke-[2.5]" />
@@ -343,7 +391,7 @@ export const KeranjangPage: React.FC = () => {
         <div className="grid grid-cols-2 p-1 rounded-2xl bg-[#F5EFE6] gap-1">
           <button
             onClick={() => setDeliveryMode('pickup')}
-            className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               deliveryMode === 'pickup'
                 ? 'bg-white text-[#3D2314] shadow-sm'
                 : 'text-[#8C7A6B] hover:text-[#3D2314]'
@@ -354,7 +402,7 @@ export const KeranjangPage: React.FC = () => {
           </button>
           <button
             onClick={() => setDeliveryMode('courier')}
-            className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               deliveryMode === 'courier'
                 ? 'bg-white text-[#3D2314] shadow-sm'
                 : 'text-[#8C7A6B] hover:text-[#3D2314]'
@@ -366,7 +414,7 @@ export const KeranjangPage: React.FC = () => {
         </div>
 
         {/* Inputs Pembeli */}
-        <div className="space-y-2.5 text-xs">
+        <div className="space-y-3 text-xs">
           <div>
             <label className="block text-[11px] font-semibold text-[#6B5749] mb-1">
               Nama Pembeli <span className="text-[#A03D2A]">*</span>
@@ -399,20 +447,79 @@ export const KeranjangPage: React.FC = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold text-[#6B5749] mb-1">
-              Jadwal Pengambilan / Pengantaran
-            </label>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F8F3EC] border border-[#E8DACB] text-[#3D2314]">
-              <Calendar className="w-3.5 h-3.5 text-[#8C7A6B] shrink-0" />
-              <input
-                type="text"
-                value={scheduleTime}
-                onChange={(e) => setScheduleTime(e.target.value)}
-                placeholder="Pilih tanggal & waktu (cth: 15 Nov, 14:00 WITA)..."
-                className="w-full bg-transparent font-medium placeholder-[#A8988B] focus:outline-none text-xs"
-              />
+          {/* JADWAL OTOMATIS: KALENDER & PILIHAN WAKTU */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <label className="block text-[11px] font-semibold text-[#6B5749]">
+                Jadwal Pengambilan / Pengantaran
+              </label>
+              <span className="text-[10px] text-[#8C7A6B]">Pilih Tanggal &amp; Waktu</span>
             </div>
+
+            {/* Tombol Pintas Tanggal Cepat */}
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setQuickDate(0)}
+                className="py-1.5 px-2 rounded-xl bg-[#FAF5EE] hover:bg-[#F3E8DA] border border-[#E8DACB] text-[10.5px] font-semibold text-[#4A2810] transition-colors cursor-pointer"
+              >
+                Hari Ini
+              </button>
+              <button
+                type="button"
+                onClick={() => setQuickDate(1)}
+                className="py-1.5 px-2 rounded-xl bg-[#FAF5EE] hover:bg-[#F3E8DA] border border-[#E8DACB] text-[10.5px] font-semibold text-[#4A2810] transition-colors cursor-pointer"
+              >
+                Besok
+              </button>
+              <button
+                type="button"
+                onClick={() => setQuickDate(2)}
+                className="py-1.5 px-2 rounded-xl bg-[#FAF5EE] hover:bg-[#F3E8DA] border border-[#E8DACB] text-[10.5px] font-semibold text-[#4A2810] transition-colors cursor-pointer"
+              >
+                Lusa
+              </button>
+            </div>
+
+            {/* Input Kalender Tanggal Otomatis & Pilihan Jam */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F8F3EC] border border-[#E8DACB] text-[#3D2314]">
+                <CalendarDays className="w-4 h-4 text-[#8C7A6B] shrink-0" />
+                <input
+                  type="date"
+                  min={todayStr}
+                  value={pickedDate}
+                  onChange={(e) => setPickedDate(e.target.value)}
+                  className="w-full bg-transparent font-medium text-xs text-[#3D2314] focus:outline-none cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F8F3EC] border border-[#E8DACB] text-[#3D2314]">
+                <Clock className="w-4 h-4 text-[#8C7A6B] shrink-0" />
+                <select
+                  value={pickedTimeSlot}
+                  onChange={(e) => setPickedTimeSlot(e.target.value)}
+                  className="w-full bg-transparent font-medium text-xs text-[#3D2314] focus:outline-none cursor-pointer"
+                >
+                  <option value="10:00 - 13:00 (Pagi)">10:00 - 13:00 (Pagi)</option>
+                  <option value="13:00 - 16:00 (Siang)">13:00 - 16:00 (Siang)</option>
+                  <option value="16:00 - 19:00 (Sore)">16:00 - 19:00 (Sore)</option>
+                  <option value="19:00 - 20:30 (Malam)">19:00 - 20:30 (Malam)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Preview Jadwal Terpilih */}
+            {scheduleTime ? (
+              <div className="p-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] text-[#4A2810] font-semibold flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-[#2C6E49] shrink-0" />
+                <span>Jadwal Terpilih: <strong>{scheduleTime}</strong></span>
+              </div>
+            ) : (
+              <p className="text-[10px] text-[#8C7A6B] italic">
+                *Klik tombol cepat di atas atau pilih tanggal pada kalender.
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -530,7 +637,7 @@ export const KeranjangPage: React.FC = () => {
                       e.stopPropagation();
                       handleCopyAccount(storeConfig.bankAccount);
                     }}
-                    className="px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] font-bold text-[#4A2810] hover:bg-[#F3E8DA] flex items-center gap-1 transition-colors"
+                    className="px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] font-bold text-[#4A2810] hover:bg-[#F3E8DA] flex items-center gap-1 transition-colors cursor-pointer"
                   >
                     {isCopied ? (
                       <>

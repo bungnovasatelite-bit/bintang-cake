@@ -21,7 +21,9 @@ import {
   QrCode,
   Building2,
   CreditCard,
-  Check
+  Check,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import { useCMS } from '../../context/CMSContext';
 import { Product } from '../../types';
@@ -52,15 +54,22 @@ export const CMSModal: React.FC = () => {
     supabaseUrl,
     supabaseAnonKey,
     updateSupabaseCredentials,
+    editingProductTarget,
+    setEditingProductTarget,
+    targetAddCategory,
+    setTargetAddCategory,
   } = useCMS();
 
-  // Login form state
+  // Login form state (PETUNJUK CREDENTIALS DIHILANGKAN DARI TAMPILAN)
   const [username, setUsername] = useState('bintang');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
 
   // CMS Tabs: products | orders | banners | payments | config
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'banners' | 'payments' | 'config'>('products');
+
+  // Filter Kategori di CMS (Cake, Cookies, Brownies, Hampers, Custom)
+  const [cmsCategoryFilter, setCmsCategoryFilter] = useState<string>('all');
 
   // Product Editor Modal state
   const [isEditingProduct, setIsEditingProduct] = useState(false);
@@ -98,6 +107,108 @@ export const CMSModal: React.FC = () => {
   const [inputKey, setInputKey] = useState(supabaseAnonKey);
   const [testResult, setTestResult] = useState<SupabaseHealthCheckResult | null>(null);
   const [isTestingSupabase, setIsTestingSupabase] = useState(false);
+  const [sqlCopied, setSqlCopied] = useState(false);
+
+  // SQL Script untuk dieksekusi di Supabase
+  const fullSqlScript = `-- =============================================================================
+-- Bintang Cake & Cookies - Database Schema & Multi-Device Cloud Sync
+-- Jalankan di Supabase SQL Editor: https://supabase.com/dashboard/project/rkgdccccfkemerwdgsvz/sql/new
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS public.categories (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    icon TEXT,
+    created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.products (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    category_id TEXT REFERENCES public.categories(id) ON DELETE SET NULL,
+    package_type TEXT,
+    price NUMERIC NOT NULL,
+    rating NUMERIC DEFAULT 5.0,
+    review_count TEXT DEFAULT '0',
+    badge TEXT,
+    image_url TEXT NOT NULL,
+    description TEXT,
+    sizes JSONB,
+    is_available BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.store_settings (
+    id TEXT PRIMARY KEY DEFAULT 'bintang_store',
+    config JSONB NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_name TEXT NOT NULL,
+    customer_phone TEXT NOT NULL,
+    delivery_mode TEXT NOT NULL,
+    schedule_time TEXT,
+    delivery_address TEXT,
+    subtotal NUMERIC NOT NULL,
+    discount NUMERIC DEFAULT 0,
+    total_amount NUMERIC NOT NULL,
+    coupon_code TEXT,
+    payment_method TEXT DEFAULT 'qris',
+    status TEXT DEFAULT 'pending',
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.order_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id UUID REFERENCES public.orders(id) ON DELETE CASCADE NOT NULL,
+    product_id TEXT REFERENCES public.products(id) ON DELETE SET NULL,
+    product_name TEXT NOT NULL,
+    price NUMERIC NOT NULL,
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    selected_size TEXT,
+    note TEXT,
+    created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.store_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can manage categories" ON public.categories;
+CREATE POLICY "Public can manage categories" ON public.categories FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can manage products" ON public.products;
+CREATE POLICY "Public can manage products" ON public.products FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can manage store_settings" ON public.store_settings;
+CREATE POLICY "Public can manage store_settings" ON public.store_settings FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can manage orders" ON public.orders;
+CREATE POLICY "Public can manage orders" ON public.orders FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can manage order items" ON public.order_items;
+CREATE POLICY "Public can manage order items" ON public.order_items FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO public.categories (id, name, description, icon) VALUES
+('cake', 'Cake', 'Aneka kue bolu dan kue tart lembut artisan', 'Cake'),
+('cookies', 'Cookies', 'Kue kering mentega Wijsman renyah dan gurih', 'Cookie'),
+('brownies', 'Brownies', 'Fudgy brownies dengan aneka topping premium', 'Coffee'),
+('hampers', 'Hampers', 'Paket bingkisan mewah untuk hari raya dan momen spesial', 'Gift'),
+('custom', 'Custom', 'Kue kustom pesanan khusus hari ulang tahun dan perayaan', 'Palette')
+ON CONFLICT (id) DO NOTHING;
+`;
+
+  const copySqlScript = () => {
+    navigator.clipboard.writeText(fullSqlScript);
+    setSqlCopied(true);
+    setTimeout(() => setSqlCopied(false), 3000);
+  };
 
   // Sync state whenever modal opens or storeConfig changes
   useEffect(() => {
@@ -113,8 +224,20 @@ export const CMSModal: React.FC = () => {
       setBankAccount(storeConfig.bankAccount || '');
       setInputUrl(supabaseUrl);
       setInputKey(supabaseAnonKey);
+
+      // Tangani pemicu langsung Edit Produk dari halaman Katalog
+      if (editingProductTarget) {
+        setActiveTab('products');
+        openEditProductForm(editingProductTarget);
+        setEditingProductTarget(null);
+      } else if (targetAddCategory) {
+        // Tangani pemicu Tambah Produk dari halaman Katalog
+        setActiveTab('products');
+        openNewProductForm(targetAddCategory as any);
+        setTargetAddCategory(null);
+      }
     }
-  }, [isCMSOpen, storeConfig, supabaseUrl, supabaseAnonKey]);
+  }, [isCMSOpen, storeConfig, supabaseUrl, supabaseAnonKey, editingProductTarget, targetAddCategory]);
 
   if (!isCMSOpen) return null;
 
@@ -123,16 +246,18 @@ export const CMSModal: React.FC = () => {
     setLoginError(null);
     const success = loginAdmin(username, password);
     if (!success) {
-      setLoginError('Username atau password salah! Gunakan user: bintang dan password: nadine13');
+      // Pesan error umum tanpa membocorkan kredensial di layar
+      setLoginError('Username atau password yang Anda masukkan salah. Silakan coba kembali.');
     }
   };
 
-  const openNewProductForm = () => {
+  const openNewProductForm = (preselectedCategory?: 'cake' | 'cookies' | 'brownies' | 'hampers' | 'custom') => {
+    const cat = preselectedCategory || (cmsCategoryFilter !== 'all' ? (cmsCategoryFilter as any) : 'cookies');
     setEditingProductId(null);
     setFormName('');
-    setFormCategory('cookies');
-    setFormPackage('TOPLES MIKA ULIR 200 GR');
-    setFormPrice(50000);
+    setFormCategory(cat);
+    setFormPackage(cat === 'cookies' ? 'TOPLES MIKA ULIR 200 GR' : cat === 'cake' ? 'CAKE / KUE ULTAH' : cat.toUpperCase());
+    setFormPrice(cat === 'cake' ? 150000 : cat === 'hampers' ? 250000 : 50000);
     setFormRating(5.0);
     setFormReviews('50+');
     setFormBadge('NEW ARRIVAL');
@@ -171,7 +296,7 @@ export const CMSModal: React.FC = () => {
     }
   };
 
-  // Upload Logo Toko dengan kompresi dan langsung simpan
+  // Upload Logo Toko dengan kompresi
   const handleLogoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -179,7 +304,7 @@ export const CMSModal: React.FC = () => {
         setIsCompressingImg(true);
         const compressed = await compressImage(file, 400, 400, 0.85);
         setLogoImage(compressed);
-        updateStoreConfig({ logoImage: compressed });
+        await updateStoreConfig({ logoImage: compressed });
       } catch (err) {
         console.error('Gagal upload logo:', err);
       } finally {
@@ -188,7 +313,7 @@ export const CMSModal: React.FC = () => {
     }
   };
 
-  // Upload Foto Hero dengan kompresi dan langsung simpan
+  // Upload Foto Hero dengan kompresi
   const handleHeroImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -196,7 +321,7 @@ export const CMSModal: React.FC = () => {
         setIsCompressingImg(true);
         const compressed = await compressImage(file, 1200, 800, 0.80);
         setHeroImage(compressed);
-        updateStoreConfig({ heroImage: compressed });
+        await updateStoreConfig({ heroImage: compressed });
       } catch (err) {
         console.error('Gagal upload foto hero:', err);
       } finally {
@@ -213,7 +338,7 @@ export const CMSModal: React.FC = () => {
         setIsCompressingImg(true);
         const compressed = await compressImage(file, 600, 600, 0.80);
         setQrisImage(compressed);
-        updateStoreConfig({ qrisImage: compressed });
+        await updateStoreConfig({ qrisImage: compressed });
       } catch (err) {
         console.error('Gagal upload QRIS:', err);
       } finally {
@@ -256,9 +381,9 @@ export const CMSModal: React.FC = () => {
     setIsEditingProduct(false);
   };
 
-  const handleSaveBanners = (e: React.FormEvent) => {
+  const handleSaveBanners = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateStoreConfig({
+    await updateStoreConfig({
       logoImage,
       heroTag,
       heroTitle,
@@ -267,9 +392,9 @@ export const CMSModal: React.FC = () => {
     });
   };
 
-  const handleSavePayments = (e: React.FormEvent) => {
+  const handleSavePayments = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateStoreConfig({
+    await updateStoreConfig({
       qrisImage,
       qrisCode,
       bankName,
@@ -289,6 +414,12 @@ export const CMSModal: React.FC = () => {
     }
   };
 
+  // Filter produk berdasarkan tab kategori di CMS
+  const filteredCmsProducts = products.filter((p) => {
+    if (cmsCategoryFilter === 'all') return true;
+    return p.category === cmsCategoryFilter;
+  });
+
   const filteredOrders = orders.filter((o) => {
     if (orderStatusFilter === 'all') return true;
     return o.status === orderStatusFilter;
@@ -303,27 +434,27 @@ export const CMSModal: React.FC = () => {
         className="w-full max-w-lg max-h-[92vh] bg-[#FAF5EE] rounded-[32px] shadow-2xl flex flex-col overflow-hidden border border-[#D4A373]/40"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ===================== VIEW 1: LOGIN ADMIN ===================== */}
+        {/* ===================== VIEW 1: LOGIN ADMIN (PETUNJUK CREDENTIALS DIHILANGKAN) ===================== */}
         {!isAdminLoggedIn ? (
           <div className="p-6 flex flex-col justify-between">
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-[#4A2810] text-[#FFFDF9] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-2xl bg-[#4A2810] text-[#FFFDF9] flex items-center justify-center shadow-xs">
                   <Lock className="w-5 h-5" />
                 </div>
                 <div>
                   <h2 className="font-serif font-bold text-lg text-[#3D2314]">
-                    Masuk Admin CMS
+                    Masuk Panel Pengelola
                   </h2>
                   <p className="text-xs text-[#8C7A6B]">
-                    Panel Kelola Konten &amp; Pesanan Bintang Cake
+                    CMS Bintang Cake &amp; Cookies
                   </p>
                 </div>
               </div>
 
               <button
                 onClick={closeCMS}
-                className="p-1.5 rounded-full hover:bg-[#F3E8DA] text-[#8C7A6B]"
+                className="p-1.5 rounded-full hover:bg-[#F3E8DA] text-[#8C7A6B] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -332,13 +463,13 @@ export const CMSModal: React.FC = () => {
             <form onSubmit={handleLoginSubmit} className="space-y-3.5 my-4">
               <div>
                 <label className="block text-xs font-bold text-[#4A2810] mb-1">
-                  Username
+                  Nama Pengguna (Username)
                 </label>
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="bintang"
+                  placeholder="Masukkan username"
                   className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none focus:border-[#4A2810]"
                   required
                 />
@@ -346,34 +477,30 @@ export const CMSModal: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold text-[#4A2810] mb-1">
-                  Password
+                  Kata Sandi (Password)
                 </label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Masukkan password"
+                  placeholder="Masukkan kata sandi"
                   className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none focus:border-[#4A2810]"
                   required
                 />
               </div>
 
               {loginError && (
-                <div className="p-2.5 rounded-xl bg-[#FDECE8] border border-[#F5C7B9] text-[11px] font-semibold text-[#A03D2A]">
+                <div className="p-2.5 rounded-xl bg-[#FDECE8] border border-[#F5C7B9] text-[11px] font-semibold text-[#A03D2A] animate-shake">
                   {loginError}
                 </div>
               )}
 
-              <div className="p-2.5 rounded-xl bg-[#FFFDF9] border border-[#E8DACB] text-[10.5px] text-[#8C7A6B]">
-                🔑 <strong>User:</strong> <code className="font-bold text-[#4A2810]">bintang</code> | <strong>Password:</strong> <code className="font-bold text-[#4A2810]">nadine13</code>
-              </div>
-
               <button
                 type="submit"
-                className="w-full py-3 rounded-2xl bg-[#4A2810] hover:bg-[#341A08] text-white font-bold text-xs shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full py-3 rounded-2xl bg-[#4A2810] hover:bg-[#341A08] text-white font-bold text-xs shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-1.5 cursor-pointer mt-2"
               >
                 <Lock className="w-3.5 h-3.5" />
-                Masuk ke Panel CMS
+                Masuk ke Panel Pengelola
               </button>
             </form>
           </div>
@@ -389,7 +516,7 @@ export const CMSModal: React.FC = () => {
                     Panel CMS Bintang Cake
                   </h3>
                   <p className="text-[10px] text-[#8C7A6B] mt-0.5">
-                    User: <strong>bintang</strong>
+                    Mode Pengelola Aktif
                   </p>
                 </div>
               </div>
@@ -398,7 +525,7 @@ export const CMSModal: React.FC = () => {
                 <button
                   onClick={logoutAdmin}
                   className="p-1.5 rounded-xl bg-white border border-[#E8DACB] text-[#A03D2A] hover:bg-[#FDECE8] text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Logout Admin"
+                  title="Logout"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Logout</span>
@@ -435,7 +562,7 @@ export const CMSModal: React.FC = () => {
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
-                Produk ({products.length})
+                Katalog ({products.length})
               </button>
 
               <button
@@ -502,20 +629,20 @@ export const CMSModal: React.FC = () => {
 
             {/* CMS Tab Body Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-              {/* ===================== TAB 1: PRODUCTS ===================== */}
+              {/* ===================== TAB 1: PRODUCTS (LENGKAP SEMUA KATEGORI) ===================== */}
               {activeTab === 'products' && (
                 <div>
                   {isEditingProduct ? (
-                    /* PRODUCT FORM (ADD/EDIT) */
+                    /* PRODUCT FORM (ADD/EDIT UNTUK SEMUA KATEGORI: CAKE, COOKIES, BROWNIES, HAMPERS, CUSTOM) */
                     <form onSubmit={handleSaveProduct} className="space-y-3 bg-white p-4 rounded-3xl border border-[#E8DACB] shadow-sm">
                       <div className="flex justify-between items-center pb-2 border-b border-[#F5EFE6]">
                         <h4 className="font-serif font-bold text-sm text-[#3D2314]">
-                          {editingProductId ? 'Edit Produk' : 'Tambah Produk Baru'}
+                          {editingProductId ? 'Edit Produk' : `Tambah Produk (${formCategory.toUpperCase()})`}
                         </h4>
                         <button
                           type="button"
                           onClick={() => setIsEditingProduct(false)}
-                          className="text-xs text-[#8C7A6B] hover:text-[#3D2314]"
+                          className="text-xs text-[#8C7A6B] hover:text-[#3D2314] cursor-pointer"
                         >
                           Batal
                         </button>
@@ -568,7 +695,7 @@ export const CMSModal: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Name & Category */}
+                      {/* Name & Category Selector (Cake, Cookies, Brownies, Hampers, Custom) */}
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="block text-[11px] font-bold text-[#4A2810] mb-1">
@@ -578,7 +705,7 @@ export const CMSModal: React.FC = () => {
                             type="text"
                             value={formName}
                             onChange={(e) => setFormName(e.target.value)}
-                            placeholder="Contoh: Semprit Wijsman"
+                            placeholder="Contoh: Choco Fudge Cake"
                             className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none"
                             required
                           />
@@ -586,18 +713,18 @@ export const CMSModal: React.FC = () => {
 
                         <div>
                           <label className="block text-[11px] font-bold text-[#4A2810] mb-1">
-                            Kategori
+                            Pilih Kategori
                           </label>
                           <select
                             value={formCategory}
                             onChange={(e) => setFormCategory(e.target.value as any)}
-                            className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none"
+                            className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none cursor-pointer"
                           >
-                            <option value="cake">Cake</option>
-                            <option value="cookies">Cookies</option>
-                            <option value="brownies">Brownies</option>
-                            <option value="hampers">Hampers</option>
-                            <option value="custom">Custom</option>
+                            <option value="cake">🎂 Cake / Bolu</option>
+                            <option value="cookies">🍪 Cookies (Kue Kering)</option>
+                            <option value="brownies">🍫 Brownies</option>
+                            <option value="hampers">🎁 Hampers / Bingkisan</option>
+                            <option value="custom">✨ Custom Cake</option>
                           </select>
                         </div>
                       </div>
@@ -612,7 +739,7 @@ export const CMSModal: React.FC = () => {
                             type="text"
                             value={formPackage}
                             onChange={(e) => setFormPackage(e.target.value)}
-                            placeholder="Toples Mika 200 gr"
+                            placeholder="Contoh: Diameter 20 cm / Toples Mika"
                             className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none"
                           />
                         </div>
@@ -624,13 +751,13 @@ export const CMSModal: React.FC = () => {
                           <select
                             value={formBadge}
                             onChange={(e) => setFormBadge(e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none"
+                            className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none cursor-pointer"
                           >
                             <option value="NONE">Tanpa Badge</option>
                             <option value="BEST SELLER">BEST SELLER</option>
                             <option value="NEW ARRIVAL">NEW ARRIVAL</option>
                             <option value="SPECIAL OFFER">SPECIAL OFFER</option>
-                            <option value="SEASONAL">SEASONAL</option>
+                            <option value="SPECIAL GIFT">SPECIAL GIFT</option>
                           </select>
                         </div>
                       </div>
@@ -683,7 +810,7 @@ export const CMSModal: React.FC = () => {
                           rows={2}
                           value={formDesc}
                           onChange={(e) => setFormDesc(e.target.value)}
-                          placeholder="Jelaskan cita rasa kue..."
+                          placeholder="Jelaskan tekstur, aroma, dan cita rasa kue..."
                           className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#3D2314] focus:outline-none resize-none"
                         />
                       </div>
@@ -706,71 +833,109 @@ export const CMSModal: React.FC = () => {
                       </div>
                     </form>
                   ) : (
-                    /* PRODUCT LIST */
+                    /* PRODUCT LIST WITH CATEGORY TABS */
                     <div className="space-y-3">
+                      {/* Filter Kategori Tabs di CMS */}
+                      <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
+                        {[
+                          { id: 'all', label: 'Semua', count: products.length },
+                          { id: 'cake', label: 'Cake', count: products.filter(p => p.category === 'cake').length },
+                          { id: 'cookies', label: 'Cookies', count: products.filter(p => p.category === 'cookies').length },
+                          { id: 'brownies', label: 'Brownies', count: products.filter(p => p.category === 'brownies').length },
+                          { id: 'hampers', label: 'Hampers', count: products.filter(p => p.category === 'hampers').length },
+                          { id: 'custom', label: 'Custom', count: products.filter(p => p.category === 'custom').length },
+                        ].map((cat) => (
+                          <button
+                            key={cat.id}
+                            onClick={() => setCmsCategoryFilter(cat.id)}
+                            className={`px-3 py-1 rounded-xl text-[10.5px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                              cmsCategoryFilter === cat.id
+                                ? 'bg-[#4A2810] text-white shadow-xs'
+                                : 'bg-white text-[#5C4534] border border-[#E8DACB] hover:bg-[#FAF5EE]'
+                            }`}
+                          >
+                            {cat.label} ({cat.count})
+                          </button>
+                        ))}
+                      </div>
+
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-[#4A2810]">
-                          Katalog ({products.length} Item)
+                          Katalog ({filteredCmsProducts.length} Item)
                         </span>
                         <button
-                          onClick={openNewProductForm}
+                          onClick={() => openNewProductForm(cmsCategoryFilter !== 'all' ? (cmsCategoryFilter as any) : 'cake')}
                           className="px-3 py-1.5 rounded-xl bg-[#4A2810] text-white text-xs font-bold flex items-center gap-1 shadow-xs hover:bg-[#341A08] cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          Tambah Produk
+                          <span>Tambah {cmsCategoryFilter !== 'all' ? cmsCategoryFilter.toUpperCase() : 'Produk'}</span>
                         </button>
                       </div>
 
-                      <div className="space-y-2">
-                        {products.map((p) => (
-                          <div
-                            key={p.id}
-                            className="p-3 rounded-2xl bg-white border border-[#E8DACB] shadow-xs flex items-center justify-between gap-3"
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <img
-                                src={p.image}
-                                alt={p.name}
-                                className="w-12 h-12 rounded-xl object-cover shrink-0 bg-[#FAF5EE]"
-                              />
-                              <div className="min-w-0">
-                                <h5 className="font-serif font-bold text-xs text-[#3D2314] truncate">
-                                  {p.name}
-                                </h5>
-                                <p className="text-[10px] text-[#8C7A6B]">
-                                  Rp {p.price.toLocaleString('id-ID')} • {p.category.toUpperCase()}
-                                </p>
-                                {p.badge && (
-                                  <span className="inline-block text-[8.5px] font-bold px-1.5 py-0.2 rounded-full bg-[#FAF5EE] text-[#A03D2A] border border-[#F5C7B9]">
-                                    {p.badge}
-                                  </span>
-                                )}
+                      {filteredCmsProducts.length > 0 ? (
+                        <div className="space-y-2">
+                          {filteredCmsProducts.map((p) => (
+                            <div
+                              key={p.id}
+                              className="p-3 rounded-2xl bg-white border border-[#E8DACB] shadow-xs flex items-center justify-between gap-3"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <img
+                                  src={p.image}
+                                  alt={p.name}
+                                  className="w-12 h-12 rounded-xl object-cover shrink-0 bg-[#FAF5EE]"
+                                />
+                                <div className="min-w-0">
+                                  <h5 className="font-serif font-bold text-xs text-[#3D2314] truncate">
+                                    {p.name}
+                                  </h5>
+                                  <p className="text-[10px] text-[#8C7A6B]">
+                                    Rp {p.price.toLocaleString('id-ID')} • {p.category.toUpperCase()}
+                                  </p>
+                                  {p.badge && (
+                                    <span className="inline-block text-[8.5px] font-bold px-1.5 py-0.2 rounded-full bg-[#FAF5EE] text-[#A03D2A] border border-[#F5C7B9]">
+                                      {p.badge}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  onClick={() => openEditProductForm(p)}
+                                  className="p-1.5 rounded-lg bg-[#FAF5EE] hover:bg-[#F3E8DA] text-[#4A2810] cursor-pointer"
+                                  title="Edit Produk"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`Hapus produk "${p.name}"?`)) {
+                                      deleteProduct(p.id);
+                                    }
+                                  }}
+                                  className="p-1.5 rounded-lg bg-[#FAF5EE] hover:bg-[#FDECE8] text-[#A03D2A] cursor-pointer"
+                                  title="Hapus Produk"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
                               </div>
                             </div>
-
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                onClick={() => openEditProductForm(p)}
-                                className="p-1.5 rounded-lg bg-[#FAF5EE] hover:bg-[#F3E8DA] text-[#4A2810] cursor-pointer"
-                                title="Edit Produk"
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (confirm(`Hapus produk "${p.name}"?`)) {
-                                    deleteProduct(p.id);
-                                  }
-                                }}
-                                className="p-1.5 rounded-lg bg-[#FAF5EE] hover:bg-[#FDECE8] text-[#A03D2A] cursor-pointer"
-                                title="Hapus Produk"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-xs text-[#8C7A6B] bg-white rounded-2xl border border-[#E8DACB]">
+                          Belum ada produk di kategori &ldquo;{cmsCategoryFilter.toUpperCase()}&rdquo;.
+                          <div className="mt-2">
+                            <button
+                              onClick={() => openNewProductForm(cmsCategoryFilter as any)}
+                              className="px-3 py-1 rounded-xl bg-[#4A2810] text-white text-xs font-bold"
+                            >
+                              + Tambah {cmsCategoryFilter.toUpperCase()} Baru
+                            </button>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -785,7 +950,7 @@ export const CMSModal: React.FC = () => {
                         Daftar Pesanan Pelanggan
                       </h4>
                       <p className="text-[10px] text-[#8C7A6B]">
-                        Hanya bisa dibuka oleh admin yang terotentikasi
+                        Tersimpan otomatis di database &amp; cache lokal
                       </p>
                     </div>
 
@@ -912,7 +1077,7 @@ export const CMSModal: React.FC = () => {
                                 <select
                                   value={ord.status}
                                   onChange={(e) => updateOrderStatus(ord.id, e.target.value as any)}
-                                  className="px-2 py-1 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] font-bold text-[#3D2314] focus:outline-none"
+                                  className="px-2 py-1 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] font-bold text-[#3D2314] focus:outline-none cursor-pointer"
                                 >
                                   <option value="pending">Pending</option>
                                   <option value="processing">Diproses</option>
@@ -1231,97 +1396,131 @@ export const CMSModal: React.FC = () => {
                 </form>
               )}
 
-              {/* ===================== TAB 5: KONFIGURASI SUPABASE ===================== */}
+              {/* ===================== TAB 5: KONFIGURASI SUPABASE & SINKRONISASI MULTI-DEVICE ===================== */}
               {activeTab === 'config' && (
-                <form onSubmit={handleSaveSupabaseConfig} className="space-y-4">
-                  <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-3">
+                <div className="space-y-4">
+                  {/* Panduan Sinkronisasi Multi-Device */}
+                  <div className="p-4 bg-gradient-to-br from-[#FFFDF9] to-[#F7EFE6] rounded-3xl border border-[#D4A373]/60 space-y-2.5">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-xl bg-[#FAF5EE] text-[#4A2810] flex items-center justify-center">
-                        <Database className="w-4 h-4 text-[#8B5E3C]" />
+                      <div className="w-7 h-7 rounded-xl bg-[#4A2810] text-[#FFFDF9] flex items-center justify-center">
+                        <Database className="w-4 h-4" />
                       </div>
+                      <h4 className="font-serif font-bold text-xs text-[#3D2314]">
+                        Sinkronisasi Database Cloud (Multi-Perangkat)
+                      </h4>
+                    </div>
+
+                    <p className="text-[11px] text-[#6B5749] leading-relaxed">
+                      Agar perubahan yang Anda buat (produk baru, ganti foto, logo, QRIS) <strong>langsung terlihat di semua HP dan laptop pelanggan</strong> tanpa kembali ke setelan awal, jalankan skrip tabel di Supabase SQL Editor.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={copySqlScript}
+                        className="px-3.5 py-2 rounded-xl bg-[#4A2810] text-white text-xs font-bold hover:bg-[#341A08] flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                      >
+                        {sqlCopied ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-[#EAD1B6]" />
+                            <span>Skrip SQL Tersalin!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>1-Klik Salin Skrip SQL</span>
+                          </>
+                        )}
+                      </button>
+
+                      <a
+                        href="https://supabase.com/dashboard/project/rkgdccccfkemerwdgsvz/sql/new"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3.5 py-2 rounded-xl bg-white border border-[#E8DACB] text-[#4A2810] text-xs font-bold hover:bg-[#FAF5EE] flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <span>Buka SQL Editor Supabase</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleSaveSupabaseConfig} className="space-y-4">
+                    <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-3">
                       <div>
-                        <h4 className="font-serif font-bold text-xs text-[#3D2314]">
-                          Kredensial Supabase
-                        </h4>
-                        <p className="text-[10px] text-[#8C7A6B]">
-                          Atur koneksi database langsung dari panel ini
-                        </p>
+                        <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                          Supabase Project URL
+                        </label>
+                        <input
+                          type="text"
+                          value={inputUrl}
+                          onChange={(e) => setInputUrl(e.target.value)}
+                          placeholder="https://xyz.supabase.co"
+                          className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-mono text-[#3D2314] focus:outline-none"
+                          required
+                        />
                       </div>
-                    </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Supabase Project URL
-                      </label>
-                      <input
-                        type="text"
-                        value={inputUrl}
-                        onChange={(e) => setInputUrl(e.target.value)}
-                        placeholder="https://xyz.supabase.co"
-                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-mono text-[#3D2314] focus:outline-none"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Supabase Anon / Public Key
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={inputKey}
-                        onChange={(e) => setInputKey(e.target.value)}
-                        placeholder="eyJhbGciOiJIUzI1NiIsIn..."
-                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-mono text-[#3D2314] focus:outline-none resize-none"
-                        required
-                      />
-                    </div>
-
-                    {testResult && (
-                      <div className={`p-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${
-                        testResult.isConnected
-                          ? 'bg-[#E3EFE3] text-[#2C6E49] border border-[#C5DEC5]'
-                          : 'bg-[#FDECE8] text-[#A03D2A] border border-[#F5C7B9]'
-                      }`}>
-                        {testResult.isConnected ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <X className="w-4 h-4 shrink-0" />}
-                        <span>{testResult.message} {testResult.latencyMs ? `(${testResult.latencyMs}ms)` : ''}</span>
+                      <div>
+                        <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                          Supabase Anon / Public Key
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={inputKey}
+                          onChange={(e) => setInputKey(e.target.value)}
+                          placeholder="eyJhbGciOiJIUzI1NiIsIn..."
+                          className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-mono text-[#3D2314] focus:outline-none resize-none"
+                          required
+                        />
                       </div>
-                    )}
-                  </div>
 
-                  <button
-                    type="submit"
-                    disabled={isTestingSupabase}
-                    className="w-full py-3 rounded-2xl bg-[#4A2810] text-white font-bold text-xs shadow-md hover:bg-[#341A08] flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    {isTestingSupabase ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Menguji &amp; Menyimpan...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Simpan &amp; Uji Koneksi Supabase</span>
-                      </>
-                    )}
-                  </button>
+                      {testResult && (
+                        <div className={`p-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${
+                          testResult.isConnected
+                            ? 'bg-[#E3EFE3] text-[#2C6E49] border border-[#C5DEC5]'
+                            : 'bg-[#FDECE8] text-[#A03D2A] border border-[#F5C7B9]'
+                        }`}>
+                          {testResult.isConnected ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <X className="w-4 h-4 shrink-0" />}
+                          <span>{testResult.message} {testResult.latencyMs ? `(${testResult.latencyMs}ms)` : ''}</span>
+                        </div>
+                      )}
+                    </div>
 
-                  <div className="pt-2 border-t border-[#E8DACB]">
                     <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm('Kembalikan semua data ke pengaturan awal bawaan?')) {
-                          resetToDefault();
-                        }
-                      }}
-                      className="w-full py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[#A03D2A] text-xs font-bold hover:bg-[#FDECE8] flex items-center justify-center gap-1.5 cursor-pointer"
+                      type="submit"
+                      disabled={isTestingSupabase}
+                      className="w-full py-3 rounded-2xl bg-[#4A2810] text-white font-bold text-xs shadow-md hover:bg-[#341A08] flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      Reset Seluruh Data ke Bawaan
+                      {isTestingSupabase ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Menguji &amp; Menyimpan...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Simpan &amp; Uji Koneksi Supabase</span>
+                        </>
+                      )}
                     </button>
-                  </div>
-                </form>
+
+                    <div className="pt-2 border-t border-[#E8DACB]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm('Kembalikan semua data ke pengaturan awal bawaan?')) {
+                            resetToDefault();
+                          }
+                        }}
+                        className="w-full py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[#A03D2A] text-xs font-bold hover:bg-[#FDECE8] flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        Reset Seluruh Data ke Bawaan
+                      </button>
+                    </div>
+                  </form>
+                </div>
               )}
             </div>
           </div>

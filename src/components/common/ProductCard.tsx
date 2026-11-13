@@ -1,9 +1,10 @@
 import React from 'react';
-import { Star, Plus } from 'lucide-react';
+import { Star, Plus, Pencil } from 'lucide-react';
 import { Product } from '../../types';
 import { Badge } from './Badge';
 import { useCart } from '../../context/CartContext';
 import { useNavigation } from '../../context/NavigationContext';
+import { useCMS } from '../../context/CMSContext';
 
 interface ProductCardProps {
   product: Product;
@@ -12,6 +13,7 @@ interface ProductCardProps {
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart } = useCart();
   const { openProductDetail } = useNavigation();
+  const { isAdminLoggedIn, openCMSToEditProduct } = useCMS();
 
   const formatIDR = (val: number) => {
     return 'Rp ' + val.toLocaleString('id-ID');
@@ -37,10 +39,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     addToCart(product, 1);
   };
 
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    openCMSToEditProduct(product);
+  };
+
   return (
     <div
       onClick={() => openProductDetail(product)}
-      className="group bg-[#FFFDFB] rounded-3xl p-2.5 shadow-sm hover:shadow-md border border-[#EFE5D9] flex flex-col justify-between transition-all duration-200 cursor-pointer active:scale-[0.99]"
+      className="group bg-[#FFFDFB] rounded-3xl p-2.5 shadow-sm hover:shadow-md border border-[#EFE5D9] flex flex-col justify-between transition-all duration-200 cursor-pointer active:scale-[0.99] relative"
     >
       <div>
         {/* Product Image Container */}
@@ -59,6 +66,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 {product.badge}
               </Badge>
             </div>
+          )}
+
+          {/* Quick Edit button for Admin */}
+          {isAdminLoggedIn && (
+            <button
+              onClick={handleEditClick}
+              className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-xs text-[#4A2810] hover:bg-[#4A2810] hover:text-white flex items-center justify-center shadow-md transition-all"
+              title="Edit Produk Ini (Admin)"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
           )}
         </div>
 
