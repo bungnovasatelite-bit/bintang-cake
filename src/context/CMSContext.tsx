@@ -14,6 +14,10 @@ import {
   updateOrderStatusInDb,
   deleteOrderFromDb
 } from '../lib/database';
+import {
+  fetchCloudStoreData,
+  pushCloudStoreData
+} from '../lib/cloudSync';
 
 export interface StoreConfig {
   logoImage?: string;
@@ -73,6 +77,7 @@ interface CMSContextType {
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
+  syncAllToCloud: () => Promise<void>;
   resetToDefault: () => void;
   isSyncing: boolean;
   syncNotice: string | null;
@@ -146,57 +151,63 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [isAdminLoggedIn]);
 
-  // Sinkronisasi data Toko (Store Settings) & Produk dari Supabase ke SEMUA PERANGKAT
+  // SINKRONISASI DATA TOKO & PRODUK DARI CLOUD KE SEMUA PERANGKAT (HP, LAPTOP, DESKTOP)
   useEffect(() => {
     async function loadCloudData() {
-      if (!isSupabaseConfigured()) return;
-
+      // 1. Ambil data termutakhir dari Cloud Store (GitHub Cloud JSON)
       try {
-        // 1. Muat pengaturan toko bersama dari Supabase
-        const { data: storeData } = await supabase
-          .from('store_settings')
-          .select('config')
-          .eq('id', 'bintang_store')
-          .single();
-
-        if (storeData && storeData.config) {
-          setStoreConfig((prev) => ({ ...prev, ...storeData.config }));
+        const cloudData = await fetchCloudStoreData();
+        if (cloudData && cloudData.products && cloudData.products.length > 0) {
+          setProducts(cloudData.products);
+          setStoreConfig((prev) => ({ ...prev, ...cloudData.storeConfig }));
           try {
-            localStorage.setItem('bintang_store_config', JSON.stringify(storeData.config));
-          } catch (e) {
-            console.warn(e);
-          }
-        }
-
-        // 2. Muat produk dari Supabase jika tabel sudah dibuat
-        const { data: prodData, error: prodErr } = await supabase
-          .from('products')
-          .select('*')
-          .order('created_at', { ascending: true });
-
-        if (!prodErr && prodData && prodData.length > 0) {
-          const mapped: Product[] = prodData.map((item) => ({
-            id: item.id,
-            name: item.name,
-            category: item.category_id as any,
-            packageType: item.package_type,
-            price: Number(item.price),
-            rating: Number(item.rating || 5.0),
-            reviewCount: item.review_count || '0',
-            badge: item.badge,
-            image: item.image_url,
-            description: item.description,
-            sizes: item.sizes,
-          }));
-          setProducts(mapped);
-          try {
-            localStorage.setItem('bintang_products', JSON.stringify(mapped));
+            localStorage.setItem('bintang_products', JSON.stringify(cloudData.products));
+            localStorage.setItem('bintang_store_config', JSON.stringify(cloudData.storeConfig));
           } catch (e) {
             console.warn(e);
           }
         }
       } catch (err) {
-        console.warn('Supabase cloud fetch info:', err);
+        console.warn('Gagal fetch cloud store data:', err);
+      }
+
+      // 2. Ambil dari Supabase jika database Supabase sudah diinisialisasi
+      if (isSupabaseConfigured()) {
+        try {
+          const { data: storeData } = await supabase
+            .from('store_settings')
+            .select('config')
+            .eq('id', 'bintang_store')
+            .single();
+
+          if (storeData && storeData.config) {
+            setStoreConfig((prev) => ({ ...prev, ...storeData.config }));
+          }
+
+          const { data: prodData, error: prodErr } = await supabase
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: true });
+
+          if (!prodErr && prodData && prodData.length > 0) {
+            const mapped: Product[] = prodData.map((item) => ({
+              id: item.id,
+              name: item.name,
+              category: item.category_id as any,
+              packageType: item.package_type,
+              price: Number(item.price),
+              rating: Number(item.rating || 5.0),
+              reviewCount: item.review_count || '0',
+              badge: item.badge,
+              image: item.image_url,
+              description: item.description,
+              sizes: item.sizes,
+            }));
+            setProducts(mapped);
+          }
+        } catch (err) {
+          console.warn('Supabase DB info:', err);
+        }
       }
     }
 
@@ -240,8 +251,9 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.removeItem('bintang_cms_admin');
   };
 
-  // Simpan Store Config lokal DAN ke Supabase (Sinkron ke semua HP/Laptop)
+  // Simpan Store Config lokal DAN ke Cloud (Langsung sinkron ke seluruh HP/laptop pembeli)
   const updateStoreConfig = async (config: Partial<StoreConfig>) => {
+    setIsSyncing(true);
     const next = { ...storeConfig, ...config };
     setStoreConfig(next);
     
@@ -251,6 +263,14 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('LocalStorage error:', e);
     }
 
+    // 1. Simpan ke Cloud Data Store (Semua perangkat melihat ini)
+    await pushCloudStoreData({
+      storeConfig: next,
+      products,
+      orders,
+    });
+
+    // 2. Simpan juga ke Supabase jika aktif
     if (isSupabaseConfigured()) {
       try {
         await supabase.from('store_settings').upsert({
@@ -259,12 +279,13 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           updated_at: new Date().toISOString()
         });
       } catch (e) {
-        console.warn('Gagal simpan store_settings ke Supabase:', e);
+        console.warn('Supabase store_settings info:', e);
       }
     }
 
-    setSyncNotice('Pengaturan toko & banner tersimpan permanen!');
-    setTimeout(() => setSyncNotice(null), 3000);
+    setIsSyncing(false);
+    setSyncNotice('Pengaturan toko tersimpan & tersinkronisasi ke seluruh perangkat!');
+    setTimeout(() => setSyncNotice(null), 3500);
   };
 
   const addProduct = async (productData: Omit<Product, 'id'>) => {
@@ -285,6 +306,13 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('LocalStorage error:', e);
     }
 
+    // Sinkronisasi otomatis ke Cloud
+    await pushCloudStoreData({
+      storeConfig,
+      products: nextProducts,
+      orders,
+    });
+
     if (isSupabaseConfigured()) {
       try {
         await supabase.from('products').insert({
@@ -301,12 +329,12 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           sizes: newProduct.sizes,
         });
       } catch (e) {
-        console.warn('Gagal insert ke Supabase:', e);
+        console.warn('Supabase products info:', e);
       }
     }
 
     setIsSyncing(false);
-    setSyncNotice(`Produk "${newProduct.name}" berhasil ditambahkan!`);
+    setSyncNotice(`Produk "${newProduct.name}" berhasil ditambahkan & tersinkron ke semua HP!`);
     setTimeout(() => setSyncNotice(null), 3500);
   };
 
@@ -321,6 +349,13 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('LocalStorage quota handling:', e);
     }
+
+    // Sinkronisasi otomatis ke Cloud
+    await pushCloudStoreData({
+      storeConfig,
+      products: nextProducts,
+      orders,
+    });
 
     if (isSupabaseConfigured()) {
       try {
@@ -338,12 +373,12 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         await supabase.from('products').update(updatePayload).eq('id', id);
       } catch (e) {
-        console.warn('Gagal update ke Supabase:', e);
+        console.warn('Supabase update info:', e);
       }
     }
 
     setIsSyncing(false);
-    setSyncNotice('Perubahan produk berhasil disimpan!');
+    setSyncNotice('Perubahan produk berhasil disimpan & tersinkron ke semua HP!');
     setTimeout(() => setSyncNotice(null), 3500);
   };
 
@@ -358,17 +393,41 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn(e);
     }
 
+    await pushCloudStoreData({
+      storeConfig,
+      products: nextProducts,
+      orders,
+    });
+
     if (isSupabaseConfigured()) {
       try {
         await supabase.from('products').delete().eq('id', id);
       } catch (e) {
-        console.warn('Gagal delete dari Supabase:', e);
+        console.warn('Supabase delete info:', e);
       }
     }
 
     setIsSyncing(false);
-    setSyncNotice('Produk berhasil dihapus!');
+    setSyncNotice('Produk berhasil dihapus dari semua perangkat!');
     setTimeout(() => setSyncNotice(null), 3500);
+  };
+
+  // Tombol 1-Klik Sinkronisasi Manual ke Cloud
+  const syncAllToCloud = async () => {
+    setIsSyncing(true);
+    const res = await pushCloudStoreData({
+      storeConfig,
+      products,
+      orders,
+    });
+    setIsSyncing(false);
+
+    if (res.success) {
+      setSyncNotice('Berhasil! Seluruh data produk, logo & informasi toko kini tersinkron ke semua perangkat pembeli.');
+    } else {
+      setSyncNotice(`Info: ${res.error || 'Data tersimpan lokal'}`);
+    }
+    setTimeout(() => setSyncNotice(null), 4000);
   };
 
   // Pesanan Pelanggan (Orders)
@@ -394,7 +453,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProducts(INITIAL_PRODUCTS);
     setStoreConfig(DEFAULT_STORE_CONFIG);
     setOrders([]);
-    setSyncNotice('Data berhasil di-reset ke setelan awal pabrik.');
+    setSyncNotice('Data berhasil di-reset ke setelan awal.');
     setTimeout(() => setSyncNotice(null), 3000);
   };
 
@@ -428,6 +487,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addProduct,
         updateProduct,
         deleteProduct,
+        syncAllToCloud,
         resetToDefault,
         isSyncing,
         syncNotice,

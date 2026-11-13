@@ -44,6 +44,7 @@ export const CMSModal: React.FC = () => {
     addProduct,
     updateProduct,
     deleteProduct,
+    syncAllToCloud,
     resetToDefault,
     syncNotice,
     isSyncing,
@@ -522,6 +523,19 @@ ON CONFLICT (id) DO NOTHING;
               </div>
 
               <div className="flex items-center gap-1.5">
+                <button
+                  onClick={syncAllToCloud}
+                  disabled={isSyncing}
+                  className="px-2.5 py-1.5 rounded-xl bg-[#4A2810] text-white hover:bg-[#341A08] text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                  title="Sinkronkan data produk & foto ke seluruh HP pembeli"
+                >
+                  {isSyncing ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5" />
+                  )}
+                  <span className="hidden sm:inline">Sinkron ke Semua HP</span>
+                </button>
                 <button
                   onClick={logoutAdmin}
                   className="p-1.5 rounded-xl bg-white border border-[#E8DACB] text-[#A03D2A] hover:bg-[#FDECE8] text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
