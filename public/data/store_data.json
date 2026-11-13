@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-13T01:30:00.000Z",
+  "updatedAt": "2026-11-13T06:43:08.903Z",
   "storeConfig": {
     "logoImage": "",
     "heroTag": "PARTNER TO ENJOY YOUR DAY",
@@ -14,9 +14,9 @@
     "boutiqueTitle": "Bintang Cake & Cookies",
     "boutiqueSubtitle": "Artisan Cake, Brownies & Wijsman Butter Cookies",
     "boutiqueStatus": "Butik Buka • Melayani Pesanan",
-    "boutiqueAddress": "Jl. Cikini Raya No. 42, Menteng, Jakarta Pusat",
-    "boutiqueHours": "09:00 - 20:00 WITA",
-    "boutiqueHoursWeekend": "10:00 - 18:00 WITA",
+    "boutiqueAddress": "Jl. KH.Wahid  Hasyim 2 GG.Sungai 1 RT.11 No.83",
+    "boutiqueHours": "09:00 - 16:00 WITA",
+    "boutiqueHoursWeekend": "Libur",
     "whatsappNumber": "0821-5873-9760",
     "fontFamily": "playfair",
     "fontWeight": "normal",
@@ -76,7 +76,7 @@
       "category": "cookies",
       "packageType": "KUE KERING",
       "price": 50000,
-      "rating": 5.0,
+      "rating": 5,
       "reviewCount": 210,
       "badge": "BEST SELLER",
       "image": "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80",
@@ -100,7 +100,7 @@
       "category": "cake",
       "packageType": "CAKE",
       "price": 65000,
-      "rating": 5.0,
+      "rating": 5,
       "reviewCount": 65,
       "badge": "NEW ARRIVAL",
       "image": "https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=600&q=80",
@@ -124,7 +124,7 @@
       "category": "hampers",
       "packageType": "HAMPERS",
       "price": 280000,
-      "rating": 5.0,
+      "rating": 5,
       "reviewCount": 48,
       "badge": "SPECIAL GIFT",
       "image": "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=600&q=80",
@@ -142,9 +142,21 @@
       "image": "https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=600&q=80",
       "description": "Vanilla Cheese Cake merupakan kue dengan perpaduan cita rasa keju yang creamy dan aroma vanilla yang harum. Memiliki tekstur lembut, halus, dan gurih pas di setiap gigitan.",
       "sizes": [
-        { "name": "Diameter 16 cm", "portion": "Ideal untuk pesta intim (4–6 porsi)", "price": 150000 },
-        { "name": "Diameter 20 cm", "portion": "Keluarga & teman (8–12 porsi)", "price": 250000 },
-        { "name": "Diameter 24 cm", "portion": "Pesta akbar (16–20 porsi)", "price": 350000 }
+        {
+          "name": "Diameter 16 cm",
+          "portion": "Ideal untuk pesta intim (4–6 porsi)",
+          "price": 150000
+        },
+        {
+          "name": "Diameter 20 cm",
+          "portion": "Keluarga & teman (8–12 porsi)",
+          "price": 250000
+        },
+        {
+          "name": "Diameter 24 cm",
+          "portion": "Pesta akbar (16–20 porsi)",
+          "price": 350000
+        }
       ]
     },
     {
@@ -165,7 +177,7 @@
       "category": "cookies",
       "packageType": "TOPLES MIKA ULIR 200 GR",
       "price": 50000,
-      "rating": 5.0,
+      "rating": 5,
       "reviewCount": "240+",
       "badge": "BEST SELLER",
       "image": "https://images.unsplash.com/photo-1548848221-0c2e497ed557?auto=format&fit=crop&w=600&q=80",
@@ -177,7 +189,7 @@
       "category": "cookies",
       "packageType": "TOPLES MIKA ULIR 200 GR",
       "price": 40000,
-      "rating": 5.0,
+      "rating": 5,
       "reviewCount": "680+",
       "badge": "BEST SELLER",
       "image": "https://images.unsplash.com/photo-1621303837174-89787a7d4729?auto=format&fit=crop&w=600&q=80",
@@ -189,7 +201,7 @@
       "category": "lidah-kucing",
       "packageType": "TOPLES MIKA ULIR 200 GR",
       "price": 55000,
-      "rating": 5.0,
+      "rating": 5,
       "reviewCount": "190+",
       "badge": "BEST SELLER",
       "image": "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=600&q=80",
