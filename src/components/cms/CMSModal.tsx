@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Lock,
@@ -23,10 +23,18 @@ import {
   CreditCard,
   Check,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Tag,
+  Type,
+  Store,
+  Users,
+  Coins,
+  MessageSquareQuote,
+  Star,
+  Flame
 } from 'lucide-react';
 import { useCMS } from '../../context/CMSContext';
-import { Product } from '../../types';
+import { Product, ProductCategory } from '../../types';
 import { compressImage } from '../../utils/imageCompressor';
 import { testSupabaseConnection, SupabaseHealthCheckResult } from '../../lib/supabase';
 import { BrandLogo } from '../icons/BrandLogo';
@@ -44,6 +52,7 @@ export const CMSModal: React.FC = () => {
     addProduct,
     updateProduct,
     deleteProduct,
+    deleteCustomerReview,
     syncAllToCloud,
     resetToDefault,
     syncNotice,
@@ -61,15 +70,17 @@ export const CMSModal: React.FC = () => {
     setTargetAddCategory,
   } = useCMS();
 
-  // Login form state (PETUNJUK CREDENTIALS DIHILANGKAN DARI TAMPILAN)
+  // Login form state
   const [username, setUsername] = useState('bintang');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  // CMS Tabs: products | orders | banners | payments | config
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'banners' | 'payments' | 'config'>('products');
+  // CMS Tabs: products | orders | promo | typography | boutique | banners | payments | reviews | config
+  const [activeTab, setActiveTab] = useState<
+    'products' | 'orders' | 'promo' | 'typography' | 'boutique' | 'banners' | 'payments' | 'reviews' | 'config'
+  >('products');
 
-  // Filter Kategori di CMS (Cake, Cookies, Brownies, Hampers, Custom)
+  // Filter Kategori di CMS (Cake, Cookies, Brownies, Hampers, Lidah Kucing, Custom)
   const [cmsCategoryFilter, setCmsCategoryFilter] = useState<string>('all');
 
   // Product Editor Modal state
@@ -78,7 +89,7 @@ export const CMSModal: React.FC = () => {
   const [isCompressingImg, setIsCompressingImg] = useState(false);
 
   const [formName, setFormName] = useState('');
-  const [formCategory, setFormCategory] = useState<'cake' | 'cookies' | 'brownies' | 'hampers' | 'custom'>('cookies');
+  const [formCategory, setFormCategory] = useState<ProductCategory>('cookies');
   const [formPackage, setFormPackage] = useState('TOPLES MIKA ULIR 200 GR');
   const [formPrice, setFormPrice] = useState<number>(50000);
   const [formRating, setFormRating] = useState<number>(5.0);
@@ -97,6 +108,28 @@ export const CMSModal: React.FC = () => {
   const [heroSubtitle, setHeroSubtitle] = useState(storeConfig.heroSubtitle);
   const [heroImage, setHeroImage] = useState(storeConfig.heroImage);
 
+  // Promo & Flash Sale state
+  const [isPromoActive, setIsPromoActive] = useState(storeConfig.isPromoActive !== false);
+  const [promoTag, setPromoTag] = useState(storeConfig.promoTag || '⚡ FLASH SALE • Berakhir 2 hari lagi');
+  const [promoTitle, setPromoTitle] = useState(storeConfig.promoTitle || 'Dapatkan Souvenir Cantik');
+  const [promoSubtitle, setPromoSubtitle] = useState(storeConfig.promoSubtitle || 'Setiap Pembelian sejumlah Rp 750.000');
+  const [promoDiscount, setPromoDiscount] = useState(storeConfig.promoDiscount || 'Rp 5.000');
+
+  // Tipografi & Gaya Font state
+  const [fontFamily, setFontFamily] = useState<'playfair' | 'serif' | 'sans' | 'classic'>(storeConfig.fontFamily || 'playfair');
+  const [fontWeight, setFontWeight] = useState<'normal' | 'semibold' | 'bold' | 'extrabold'>(storeConfig.fontWeight || 'normal');
+  const [fontStyle, setFontStyle] = useState<'normal' | 'italic'>(storeConfig.fontStyle || 'normal');
+  const [fontSizeScale, setFontSizeScale] = useState<'normal' | 'large' | 'xlarge'>(storeConfig.fontSizeScale || 'normal');
+
+  // Info Butik & Profil state
+  const [boutiqueTitle, setBoutiqueTitle] = useState(storeConfig.boutiqueTitle || 'Bintang Cake & Cookies');
+  const [boutiqueSubtitle, setBoutiqueSubtitle] = useState(storeConfig.boutiqueSubtitle || 'Artisan Cake, Brownies & Wijsman Butter Cookies');
+  const [boutiqueStatus, setBoutiqueStatus] = useState(storeConfig.boutiqueStatus || 'Butik Buka • Melayani Pesanan');
+  const [boutiqueHours, setBoutiqueHours] = useState(storeConfig.boutiqueHours || '09:00 - 20:00 WITA');
+  const [boutiqueHoursWeekend, setBoutiqueHoursWeekend] = useState(storeConfig.boutiqueHoursWeekend || '10:00 - 18:00 WITA');
+  const [boutiqueAddress, setBoutiqueAddress] = useState(storeConfig.boutiqueAddress || 'Jl. Cikini Raya No. 42, Menteng, Jakarta Pusat');
+  const [whatsappNumber, setWhatsappNumber] = useState(storeConfig.whatsappNumber || '0821-5873-9760');
+
   // Payment settings state (QRIS & Bank)
   const [qrisImage, setQrisImage] = useState(storeConfig.qrisImage || '');
   const [qrisCode, setQrisCode] = useState(storeConfig.qrisCode || '');
@@ -110,7 +143,17 @@ export const CMSModal: React.FC = () => {
   const [isTestingSupabase, setIsTestingSupabase] = useState(false);
   const [sqlCopied, setSqlCopied] = useState(false);
 
-  // SQL Script untuk dieksekusi di Supabase
+  // Total Analytics Pesanan
+  const totalOrdersCount = orders.length;
+  const uniqueCustomersCount = useMemo(() => {
+    const phones = orders.map(o => (o.customerPhone || '').replace(/[^0-9]/g, '') || o.customerName.trim().toLowerCase());
+    return new Set(phones.filter(Boolean)).size;
+  }, [orders]);
+  const totalRevenue = useMemo(() => {
+    return orders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
+  }, [orders]);
+
+  // SQL Script untuk Supabase
   const fullSqlScript = `-- =============================================================================
 -- Bintang Cake & Cookies - Database Schema & Multi-Device Cloud Sync
 -- Jalankan di Supabase SQL Editor: https://supabase.com/dashboard/project/rkgdccccfkemerwdgsvz/sql/new
@@ -158,49 +201,27 @@ CREATE TABLE IF NOT EXISTS public.orders (
     total_amount NUMERIC NOT NULL,
     coupon_code TEXT,
     payment_method TEXT DEFAULT 'qris',
-    status TEXT DEFAULT 'pending',
-    notes TEXT,
+    status TEXT DEFAULT 'pending' NOT NULL,
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.order_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_id UUID REFERENCES public.orders(id) ON DELETE CASCADE NOT NULL,
+    order_id UUID REFERENCES public.orders(id) ON DELETE CASCADE,
     product_id TEXT REFERENCES public.products(id) ON DELETE SET NULL,
     product_name TEXT NOT NULL,
     price NUMERIC NOT NULL,
-    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    quantity INTEGER NOT NULL,
     selected_size TEXT,
-    note TEXT,
     created_at TIMESTAMPTZ DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
-
-ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.store_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Public can manage categories" ON public.categories;
-CREATE POLICY "Public can manage categories" ON public.categories FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Public can manage products" ON public.products;
-CREATE POLICY "Public can manage products" ON public.products FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Public can manage store_settings" ON public.store_settings;
-CREATE POLICY "Public can manage store_settings" ON public.store_settings FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Public can manage orders" ON public.orders;
-CREATE POLICY "Public can manage orders" ON public.orders FOR ALL USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Public can manage order items" ON public.order_items;
-CREATE POLICY "Public can manage order items" ON public.order_items FOR ALL USING (true) WITH CHECK (true);
 
 INSERT INTO public.categories (id, name, description, icon) VALUES
 ('cake', 'Cake', 'Aneka kue bolu dan kue tart lembut artisan', 'Cake'),
 ('cookies', 'Cookies', 'Kue kering mentega Wijsman renyah dan gurih', 'Cookie'),
 ('brownies', 'Brownies', 'Fudgy brownies dengan aneka topping premium', 'Coffee'),
 ('hampers', 'Hampers', 'Paket bingkisan mewah untuk hari raya dan momen spesial', 'Gift'),
+('lidah-kucing', 'Lidah Kucing', 'Kue lidah kucing tipis renyah mentega Wijsman', 'Sparkles'),
 ('custom', 'Custom', 'Kue kustom pesanan khusus hari ulang tahun dan perayaan', 'Palette')
 ON CONFLICT (id) DO NOTHING;
 `;
@@ -219,6 +240,22 @@ ON CONFLICT (id) DO NOTHING;
       setHeroTitle(storeConfig.heroTitle);
       setHeroSubtitle(storeConfig.heroSubtitle);
       setHeroImage(storeConfig.heroImage);
+      setIsPromoActive(storeConfig.isPromoActive !== false);
+      setPromoTag(storeConfig.promoTag || '⚡ FLASH SALE • Berakhir 2 hari lagi');
+      setPromoTitle(storeConfig.promoTitle || 'Dapatkan Souvenir Cantik');
+      setPromoSubtitle(storeConfig.promoSubtitle || 'Setiap Pembelian sejumlah Rp 750.000');
+      setPromoDiscount(storeConfig.promoDiscount || 'Rp 5.000');
+      setFontFamily(storeConfig.fontFamily || 'playfair');
+      setFontWeight(storeConfig.fontWeight || 'normal');
+      setFontStyle(storeConfig.fontStyle || 'normal');
+      setFontSizeScale(storeConfig.fontSizeScale || 'normal');
+      setBoutiqueTitle(storeConfig.boutiqueTitle || 'Bintang Cake & Cookies');
+      setBoutiqueSubtitle(storeConfig.boutiqueSubtitle || 'Artisan Cake, Brownies & Wijsman Butter Cookies');
+      setBoutiqueStatus(storeConfig.boutiqueStatus || 'Butik Buka • Melayani Pesanan');
+      setBoutiqueHours(storeConfig.boutiqueHours || '09:00 - 20:00 WITA');
+      setBoutiqueHoursWeekend(storeConfig.boutiqueHoursWeekend || '10:00 - 18:00 WITA');
+      setBoutiqueAddress(storeConfig.boutiqueAddress || 'Jl. Cikini Raya No. 42, Menteng, Jakarta Pusat');
+      setWhatsappNumber(storeConfig.whatsappNumber || '0821-5873-9760');
       setQrisImage(storeConfig.qrisImage || '');
       setQrisCode(storeConfig.qrisCode || '');
       setBankName(storeConfig.bankName || '');
@@ -226,13 +263,11 @@ ON CONFLICT (id) DO NOTHING;
       setInputUrl(supabaseUrl);
       setInputKey(supabaseAnonKey);
 
-      // Tangani pemicu langsung Edit Produk dari halaman Katalog
       if (editingProductTarget) {
         setActiveTab('products');
         openEditProductForm(editingProductTarget);
         setEditingProductTarget(null);
       } else if (targetAddCategory) {
-        // Tangani pemicu Tambah Produk dari halaman Katalog
         setActiveTab('products');
         openNewProductForm(targetAddCategory as any);
         setTargetAddCategory(null);
@@ -247,18 +282,25 @@ ON CONFLICT (id) DO NOTHING;
     setLoginError(null);
     const success = loginAdmin(username, password);
     if (!success) {
-      // Pesan error umum tanpa membocorkan kredensial di layar
       setLoginError('Username atau password yang Anda masukkan salah. Silakan coba kembali.');
     }
   };
 
-  const openNewProductForm = (preselectedCategory?: 'cake' | 'cookies' | 'brownies' | 'hampers' | 'custom') => {
-    const cat = preselectedCategory || (cmsCategoryFilter !== 'all' ? (cmsCategoryFilter as any) : 'cookies');
+  const openNewProductForm = (preselectedCategory?: ProductCategory) => {
+    const cat = preselectedCategory || (cmsCategoryFilter !== 'all' ? (cmsCategoryFilter as ProductCategory) : 'cookies');
     setEditingProductId(null);
     setFormName('');
     setFormCategory(cat);
-    setFormPackage(cat === 'cookies' ? 'TOPLES MIKA ULIR 200 GR' : cat === 'cake' ? 'CAKE / KUE ULTAH' : cat.toUpperCase());
-    setFormPrice(cat === 'cake' ? 150000 : cat === 'hampers' ? 250000 : 50000);
+    setFormPackage(
+      cat === 'cookies' || cat === 'lidah-kucing'
+        ? 'TOPLES MIKA ULIR 200 GR'
+        : cat === 'cake'
+        ? 'CAKE / KUE ULTAH'
+        : cat === 'brownies'
+        ? 'BOX SEKAT PREMIUM'
+        : cat.toUpperCase()
+    );
+    setFormPrice(cat === 'cake' ? 150000 : cat === 'hampers' ? 250000 : 55000);
     setFormRating(5.0);
     setFormReviews('50+');
     setFormBadge('NEW ARRIVAL');
@@ -297,7 +339,7 @@ ON CONFLICT (id) DO NOTHING;
     }
   };
 
-  // Upload Logo Toko dengan kompresi
+  // Upload Logo Toko
   const handleLogoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -314,7 +356,7 @@ ON CONFLICT (id) DO NOTHING;
     }
   };
 
-  // Upload Foto Hero dengan kompresi
+  // Upload Foto Hero
   const handleHeroImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -393,6 +435,40 @@ ON CONFLICT (id) DO NOTHING;
     });
   };
 
+  const handleSavePromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateStoreConfig({
+      isPromoActive,
+      promoTag,
+      promoTitle,
+      promoSubtitle,
+      promoDiscount,
+    });
+  };
+
+  const handleSaveTypography = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateStoreConfig({
+      fontFamily,
+      fontWeight,
+      fontStyle,
+      fontSizeScale,
+    });
+  };
+
+  const handleSaveBoutique = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateStoreConfig({
+      boutiqueTitle,
+      boutiqueSubtitle,
+      boutiqueStatus,
+      boutiqueHours,
+      boutiqueHoursWeekend,
+      boutiqueAddress,
+      whatsappNumber,
+    });
+  };
+
   const handleSavePayments = async (e: React.FormEvent) => {
     e.preventDefault();
     await updateStoreConfig({
@@ -405,93 +481,91 @@ ON CONFLICT (id) DO NOTHING;
 
   const handleSaveSupabaseConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateSupabaseCredentials(inputUrl, inputKey);
     setIsTestingSupabase(true);
-    try {
-      const res = await testSupabaseConnection();
-      setTestResult(res);
-    } finally {
-      setIsTestingSupabase(false);
+    setTestResult(null);
+
+    const check = await testSupabaseConnection(inputUrl, inputKey);
+    setTestResult(check);
+    setIsTestingSupabase(false);
+
+    if (check.isConnected) {
+      updateSupabaseCredentials(inputUrl, inputKey);
     }
   };
 
-  // Filter produk berdasarkan tab kategori di CMS
+  // Filter produk berdasarkan tab kategori yang aktif di CMS
   const filteredCmsProducts = products.filter((p) => {
     if (cmsCategoryFilter === 'all') return true;
     return p.category === cmsCategoryFilter;
   });
 
+  // Filter pesanan
   const filteredOrders = orders.filter((o) => {
     if (orderStatusFilter === 'all') return true;
     return o.status === orderStatusFilter;
   });
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 animate-fade-in"
-      onClick={closeCMS}
-    >
-      <div
-        className="w-full max-w-lg max-h-[92vh] bg-[#FAF5EE] rounded-[32px] shadow-2xl flex flex-col overflow-hidden border border-[#D4A373]/40"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* ===================== VIEW 1: LOGIN ADMIN (PETUNJUK CREDENTIALS DIHILANGKAN) ===================== */}
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-fade-in">
+      <div className="w-full max-w-xl bg-[#FAF5EE] rounded-3xl border border-[#E8DACB] shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+        {/* ===================== VIEW 1: LOGIN ADMIN ===================== */}
         {!isAdminLoggedIn ? (
-          <div className="p-6 flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-[#4A2810] text-[#FFFDF9] flex items-center justify-center shadow-xs">
-                  <Lock className="w-5 h-5" />
+          <div className="p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-2xl bg-[#4A2810] text-[#FAF5EE] flex items-center justify-center shadow-xs">
+                  <Lock className="w-4 h-4" />
                 </div>
                 <div>
-                  <h2 className="font-serif font-bold text-lg text-[#3D2314]">
+                  <h3 className="font-serif font-bold text-base text-[#3D2314]">
                     Masuk Panel Pengelola
-                  </h2>
-                  <p className="text-xs text-[#8C7A6B]">
-                    CMS Bintang Cake &amp; Cookies
+                  </h3>
+                  <p className="text-[11px] text-[#8C7A6B]">
+                    Akses khusus pemilik &amp; admin Bintang Cake
                   </p>
                 </div>
               </div>
 
               <button
                 onClick={closeCMS}
-                className="p-1.5 rounded-full hover:bg-[#F3E8DA] text-[#8C7A6B] cursor-pointer"
+                className="p-1.5 rounded-full hover:bg-[#EFE5D9] text-[#8C7A6B] cursor-pointer"
+                aria-label="Tutup"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleLoginSubmit} className="space-y-3.5 my-4">
+            <form onSubmit={handleLoginSubmit} className="space-y-3 pt-2">
               <div>
                 <label className="block text-xs font-bold text-[#4A2810] mb-1">
-                  Nama Pengguna (Username)
+                  Username
                 </label>
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Masukkan username"
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none focus:border-[#4A2810]"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none focus:border-[#4A2810]"
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-[#4A2810] mb-1">
-                  Kata Sandi (Password)
+                  Password
                 </label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Masukkan kata sandi"
-                  className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none focus:border-[#4A2810]"
+                  placeholder="Masukkan password"
+                  className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none focus:border-[#4A2810]"
                   required
                 />
               </div>
 
               {loginError && (
-                <div className="p-2.5 rounded-xl bg-[#FDECE8] border border-[#F5C7B9] text-[11px] font-semibold text-[#A03D2A] animate-shake">
+                <div className="p-2.5 rounded-xl bg-[#FDECE8] border border-[#F5C7B9] text-xs text-[#A03D2A] font-medium">
                   {loginError}
                 </div>
               )}
@@ -509,7 +583,7 @@ ON CONFLICT (id) DO NOTHING;
           /* ===================== VIEW 2: CMS DASHBOARD ===================== */
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Top Bar */}
-            <div className="p-4 bg-[#FAF5EE] border-b border-[#E8DACB] flex items-center justify-between shrink-0">
+            <div className="p-3.5 bg-[#FAF5EE] border-b border-[#E8DACB] flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#2C6E49] animate-pulse" />
                 <div>
@@ -517,7 +591,7 @@ ON CONFLICT (id) DO NOTHING;
                     Panel CMS Bintang Cake
                   </h3>
                   <p className="text-[10px] text-[#8C7A6B] mt-0.5">
-                    Mode Pengelola Aktif
+                    Mode Pengelola Aktif • Multi-Perangkat
                   </p>
                 </div>
               </div>
@@ -562,7 +636,7 @@ ON CONFLICT (id) DO NOTHING;
               </div>
             )}
 
-            {/* CMS Navigation Tabs (5 Tabs) */}
+            {/* CMS Navigation Tabs (Lengkap & Terorganisir) */}
             <div className="flex items-center px-3 pt-2 border-b border-[#E8DACB] gap-1 shrink-0 bg-[#FFFDF9]/60 overflow-x-auto no-scrollbar">
               <button
                 onClick={() => {
@@ -597,6 +671,51 @@ ON CONFLICT (id) DO NOTHING;
 
               <button
                 onClick={() => {
+                  setActiveTab('promo');
+                  setIsEditingProduct(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                  activeTab === 'promo'
+                    ? 'border-[#4A2810] text-[#4A2810]'
+                    : 'border-transparent text-[#8C7A6B] hover:text-[#3D2314]'
+                }`}
+              >
+                <Tag className="w-3.5 h-3.5" />
+                Promo Flash Sale
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('typography');
+                  setIsEditingProduct(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                  activeTab === 'typography'
+                    ? 'border-[#4A2810] text-[#4A2810]'
+                    : 'border-transparent text-[#8C7A6B] hover:text-[#3D2314]'
+                }`}
+              >
+                <Type className="w-3.5 h-3.5" />
+                Gaya Font
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('boutique');
+                  setIsEditingProduct(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                  activeTab === 'boutique'
+                    ? 'border-[#4A2810] text-[#4A2810]'
+                    : 'border-transparent text-[#8C7A6B] hover:text-[#3D2314]'
+                }`}
+              >
+                <Store className="w-3.5 h-3.5" />
+                Info Butik
+              </button>
+
+              <button
+                onClick={() => {
                   setActiveTab('banners');
                   setIsEditingProduct(false);
                 }}
@@ -627,6 +746,21 @@ ON CONFLICT (id) DO NOTHING;
 
               <button
                 onClick={() => {
+                  setActiveTab('reviews');
+                  setIsEditingProduct(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                  activeTab === 'reviews'
+                    ? 'border-[#4A2810] text-[#4A2810]'
+                    : 'border-transparent text-[#8C7A6B] hover:text-[#3D2314]'
+                }`}
+              >
+                <MessageSquareQuote className="w-3.5 h-3.5" />
+                Ulasan ({storeConfig.customerReviews?.length || 0})
+              </button>
+
+              <button
+                onClick={() => {
                   setActiveTab('config');
                   setIsEditingProduct(false);
                 }}
@@ -643,11 +777,10 @@ ON CONFLICT (id) DO NOTHING;
 
             {/* CMS Tab Body Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-              {/* ===================== TAB 1: PRODUCTS (LENGKAP SEMUA KATEGORI) ===================== */}
+              {/* ===================== TAB 1: PRODUCTS (LENGKAP SEMUA KATEGORI TERMASUK LIDAH KUCING) ===================== */}
               {activeTab === 'products' && (
                 <div>
                   {isEditingProduct ? (
-                    /* PRODUCT FORM (ADD/EDIT UNTUK SEMUA KATEGORI: CAKE, COOKIES, BROWNIES, HAMPERS, CUSTOM) */
                     <form onSubmit={handleSaveProduct} className="space-y-3 bg-white p-4 rounded-3xl border border-[#E8DACB] shadow-sm">
                       <div className="flex justify-between items-center pb-2 border-b border-[#F5EFE6]">
                         <h4 className="font-serif font-bold text-sm text-[#3D2314]">
@@ -709,7 +842,7 @@ ON CONFLICT (id) DO NOTHING;
                         </div>
                       </div>
 
-                      {/* Name & Category Selector (Cake, Cookies, Brownies, Hampers, Custom) */}
+                      {/* Name & Category Selector */}
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="block text-[11px] font-bold text-[#4A2810] mb-1">
@@ -719,7 +852,7 @@ ON CONFLICT (id) DO NOTHING;
                             type="text"
                             value={formName}
                             onChange={(e) => setFormName(e.target.value)}
-                            placeholder="Contoh: Choco Fudge Cake"
+                            placeholder="Contoh: Lidah Kucing Keju"
                             className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none"
                             required
                           />
@@ -738,6 +871,7 @@ ON CONFLICT (id) DO NOTHING;
                             <option value="cookies">🍪 Cookies (Kue Kering)</option>
                             <option value="brownies">🍫 Brownies</option>
                             <option value="hampers">🎁 Hampers / Bingkisan</option>
+                            <option value="lidah-kucing">🐱 Lidah Kucing</option>
                             <option value="custom">✨ Custom Cake</option>
                           </select>
                         </div>
@@ -753,49 +887,49 @@ ON CONFLICT (id) DO NOTHING;
                             type="text"
                             value={formPackage}
                             onChange={(e) => setFormPackage(e.target.value)}
-                            placeholder="Contoh: Diameter 20 cm / Toples Mika"
+                            placeholder="TOPLES MIKA ULIR 200 GR"
                             className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none"
                           />
                         </div>
 
                         <div>
                           <label className="block text-[11px] font-bold text-[#4A2810] mb-1">
-                            Label Badge
+                            Label / Badge
                           </label>
                           <select
                             value={formBadge}
                             onChange={(e) => setFormBadge(e.target.value)}
                             className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none cursor-pointer"
                           >
-                            <option value="NONE">Tanpa Badge</option>
                             <option value="BEST SELLER">BEST SELLER</option>
                             <option value="NEW ARRIVAL">NEW ARRIVAL</option>
-                            <option value="SPECIAL OFFER">SPECIAL OFFER</option>
-                            <option value="SPECIAL GIFT">SPECIAL GIFT</option>
+                            <option value="PROMO">PROMO</option>
+                            <option value="PRE-ORDER">PRE-ORDER</option>
+                            <option value="NONE">Tanpa Badge</option>
                           </select>
                         </div>
                       </div>
 
-                      {/* Price & Rating */}
+                      {/* Price, Rating, Reviews */}
                       <div className="grid grid-cols-2 gap-2">
                         <div>
                           <label className="block text-[11px] font-bold text-[#4A2810] mb-1">
-                            Harga (Rp)
+                            Harga Satuan (Rp)
                           </label>
                           <input
                             type="number"
                             value={formPrice}
                             onChange={(e) => setFormPrice(Number(e.target.value))}
-                            placeholder="50000"
                             className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none"
                             required
                           />
                         </div>
+
                         <div>
                           <label className="block text-[11px] font-bold text-[#4A2810] mb-1">
                             Rating &amp; Ulasan
                           </label>
-                          <div className="grid grid-cols-2 gap-1">
+                          <div className="grid grid-cols-2 gap-1.5">
                             <input
                               type="number"
                               step="0.1"
@@ -857,6 +991,7 @@ ON CONFLICT (id) DO NOTHING;
                           { id: 'cookies', label: 'Cookies', count: products.filter(p => p.category === 'cookies').length },
                           { id: 'brownies', label: 'Brownies', count: products.filter(p => p.category === 'brownies').length },
                           { id: 'hampers', label: 'Hampers', count: products.filter(p => p.category === 'hampers').length },
+                          { id: 'lidah-kucing', label: 'Lidah Kucing', count: products.filter(p => p.category === 'lidah-kucing').length },
                           { id: 'custom', label: 'Custom', count: products.filter(p => p.category === 'custom').length },
                         ].map((cat) => (
                           <button
@@ -955,16 +1090,52 @@ ON CONFLICT (id) DO NOTHING;
                 </div>
               )}
 
-              {/* ===================== TAB 2: DAFTAR PESANAN PELANGGAN ===================== */}
+              {/* ===================== TAB 2: DAFTAR PESANAN PELANGGAN & ANALITIK ===================== */}
               {activeTab === 'orders' && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                <div className="space-y-3.5">
+                  {/* RINGKASAN STATISTIK PESANAN */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-3 rounded-2xl bg-white border border-[#E8DACB] shadow-2xs space-y-1">
+                      <div className="flex items-center gap-1.5 text-[#8B5E3C]">
+                        <ClipboardList className="w-3.5 h-3.5" />
+                        <span className="text-[10px] font-bold text-[#8C7A6B]">Total Pesanan</span>
+                      </div>
+                      <p className="font-serif font-bold text-base text-[#3D2314] leading-none">
+                        {totalOrdersCount}
+                      </p>
+                      <span className="text-[9px] text-[#2C6E49] font-medium block">Pesanan Masuk</span>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-white border border-[#E8DACB] shadow-2xs space-y-1">
+                      <div className="flex items-center gap-1.5 text-[#8B5E3C]">
+                        <Users className="w-3.5 h-3.5" />
+                        <span className="text-[10px] font-bold text-[#8C7A6B]">Total Pembeli</span>
+                      </div>
+                      <p className="font-serif font-bold text-base text-[#3D2314] leading-none">
+                        {uniqueCustomersCount}
+                      </p>
+                      <span className="text-[9px] text-[#2C6E49] font-medium block">Pelanggan Unik</span>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-white border border-[#E8DACB] shadow-2xs space-y-1">
+                      <div className="flex items-center gap-1.5 text-[#8B5E3C]">
+                        <Coins className="w-3.5 h-3.5" />
+                        <span className="text-[10px] font-bold text-[#8C7A6B]">Total Omset</span>
+                      </div>
+                      <p className="font-serif font-bold text-xs sm:text-sm text-[#4A2810] truncate leading-none">
+                        Rp {totalRevenue.toLocaleString('id-ID')}
+                      </p>
+                      <span className="text-[9px] text-[#2C6E49] font-medium block">Akumulasi Penjualan</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
                     <div>
                       <h4 className="font-serif font-bold text-sm text-[#3D2314]">
-                        Daftar Pesanan Pelanggan
+                        Daftar Pesanan Calon Pembeli
                       </h4>
                       <p className="text-[10px] text-[#8C7A6B]">
-                        Tersimpan otomatis di database &amp; cache lokal
+                        Hanya mencatat pesanan asli dari calon pembeli
                       </p>
                     </div>
 
@@ -979,7 +1150,7 @@ ON CONFLICT (id) DO NOTHING;
                   </div>
 
                   {/* Filter Status Buttons */}
-                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
+                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
                     {[
                       { id: 'all', label: 'Semua' },
                       { id: 'pending', label: 'Pending' },
@@ -1057,7 +1228,7 @@ ON CONFLICT (id) DO NOTHING;
                               </div>
 
                               <a
-                                href={`https://wa.me/${ord.customerPhone.replace(/[^0-9]/g, '')}`}
+                                href={`https://wa.me/${(ord.customerPhone || '').replace(/[^0-9]/g, '')}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="px-2.5 py-1 rounded-xl bg-[#E3EFE3] text-[#2C6E49] text-[10.5px] font-bold flex items-center gap-1 hover:bg-[#d2e7d2]"
@@ -1113,7 +1284,366 @@ ON CONFLICT (id) DO NOTHING;
                 </div>
               )}
 
-              {/* ===================== TAB 3: LOGO & HERO BANNER ===================== */}
+              {/* ===================== TAB 3: PROMO & FLASH SALE ===================== */}
+              {activeTab === 'promo' && (
+                <form onSubmit={handleSavePromo} className="space-y-4">
+                  <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-[#FAF5EE] text-[#4A2810] flex items-center justify-center">
+                          <Flame className="w-4 h-4 text-[#A2442C]" />
+                        </div>
+                        <div>
+                          <h4 className="font-serif font-bold text-xs text-[#3D2314]">
+                            Banner Promo &amp; Flash Sale
+                          </h4>
+                          <p className="text-[10px] text-[#8C7A6B]">
+                            Tampil di halaman depan beranda untuk menarik minat pembeli
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Toggle Aktifkan Promo */}
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <span className="text-xs font-bold text-[#4A2810]">
+                          {isPromoActive ? 'Aktif' : 'Nonaktif'}
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={isPromoActive}
+                          onChange={(e) => setIsPromoActive(e.target.checked)}
+                          className="w-4 h-4 accent-[#4A2810] cursor-pointer"
+                        />
+                      </label>
+                    </div>
+
+                    {/* Pratinjau Banner Promo */}
+                    <div className="rounded-2xl p-3 bg-gradient-to-r from-[#FDECE8] via-[#FAF0EB] to-[#FCEEE9] border border-[#F5C7B9]">
+                      <span className="inline-block text-[9px] font-bold text-[#A2442C] bg-[#FCD7CD] px-2 py-0.5 rounded-full mb-1">
+                        {promoTag || 'FLASH SALE'}
+                      </span>
+                      <h5 className="font-serif font-bold text-sm text-[#3D2314]">
+                        {promoTitle || 'Judul Promo'}
+                      </h5>
+                      <p className="text-xs text-[#7A5844] mt-0.5">
+                        {promoSubtitle || 'Deskripsi promo manis...'}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                        Label Tag Promo (Contoh: Flash Sale)
+                      </label>
+                      <input
+                        type="text"
+                        value={promoTag}
+                        onChange={(e) => setPromoTag(e.target.value)}
+                        placeholder="Contoh: ⚡ FLASH SALE • Berakhir 2 hari lagi"
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                        Judul Promo Utama
+                      </label>
+                      <input
+                        type="text"
+                        value={promoTitle}
+                        onChange={(e) => setPromoTitle(e.target.value)}
+                        placeholder="Contoh: Dapatkan Souvenir Cantik"
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                        Subjudul / Syarat Promo
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={promoSubtitle}
+                        onChange={(e) => setPromoSubtitle(e.target.value)}
+                        placeholder="Contoh: Dapatkan Souvenir Cantik setiap Pembelian sejumlah Rp 750.000"
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#3D2314] focus:outline-none resize-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                        Diskon / Potongan Harga
+                      </label>
+                      <input
+                        type="text"
+                        value={promoDiscount}
+                        onChange={(e) => setPromoDiscount(e.target.value)}
+                        placeholder="Contoh: Rp 5.000 atau Diskon 10%"
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-3 rounded-2xl bg-[#4A2810] text-white font-bold text-xs shadow-md hover:bg-[#341A08] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Simpan Pengaturan Promo Flash Sale</span>
+                  </button>
+                </form>
+              )}
+
+              {/* ===================== TAB 4: TIPOGRAFI & GAYA FONT ===================== */}
+              {activeTab === 'typography' && (
+                <form onSubmit={handleSaveTypography} className="space-y-4">
+                  <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-3.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-[#FAF5EE] text-[#4A2810] flex items-center justify-center">
+                        <Type className="w-4 h-4 text-[#8B5E3C]" />
+                      </div>
+                      <div>
+                        <h4 className="font-serif font-bold text-xs text-[#3D2314]">
+                          Pengaturan Tipografi &amp; Gaya Font
+                        </h4>
+                        <p className="text-[10px] text-[#8C7A6B]">
+                          Sesuaikan gaya huruf, ketebalan, dan ukuran font aplikasi
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Live Font Preview Card */}
+                    <div className="p-4 rounded-2xl bg-[#FAF5EE] border border-[#E8DACB] space-y-1.5 text-center">
+                      <span className="text-[10px] font-semibold text-[#8C7A6B] uppercase tracking-wider block">
+                        Pratinjau Font Langsung
+                      </span>
+                      <h3
+                        style={{
+                          fontFamily:
+                            fontFamily === 'sans'
+                              ? "'Plus Jakarta Sans', sans-serif"
+                              : fontFamily === 'serif'
+                              ? "'Merriweather', serif"
+                              : fontFamily === 'classic'
+                              ? "'Cinzel', serif"
+                              : "'Playfair Display', serif",
+                          fontWeight:
+                            fontWeight === 'normal'
+                              ? '500'
+                              : fontWeight === 'semibold'
+                              ? '600'
+                              : fontWeight === 'bold'
+                              ? '700'
+                              : '800',
+                          fontStyle: fontStyle,
+                        }}
+                        className="text-lg sm:text-xl text-[#3D2314]"
+                      >
+                        Bintang Cake &amp; Cookies
+                      </h3>
+                      <p className="text-xs text-[#7A6657]">
+                        Artisan Bakery &amp; Wijsman Butter Cookies Berkualitas
+                      </p>
+                    </div>
+
+                    {/* Pilihan Jenis Font */}
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                        Jenis Font (Font Family)
+                      </label>
+                      <select
+                        value={fontFamily}
+                        onChange={(e) => setFontFamily(e.target.value as any)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none cursor-pointer"
+                      >
+                        <option value="playfair">Playfair Display (Klasik, Mewah &amp; Anggun)</option>
+                        <option value="serif">Merriweather (Serif Elegan &amp; Hangat)</option>
+                        <option value="sans">Plus Jakarta Sans (Modern, Bersih &amp; Terbaca)</option>
+                        <option value="classic">Cinzel (Royal, Eksklusif &amp; Megah)</option>
+                      </select>
+                    </div>
+
+                    {/* Pilihan Ketebalan Font */}
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                        Ketebalan Font (Font Weight)
+                      </label>
+                      <select
+                        value={fontWeight}
+                        onChange={(e) => setFontWeight(e.target.value as any)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none cursor-pointer"
+                      >
+                        <option value="normal">Normal (Standar 500)</option>
+                        <option value="semibold">Semi-Bold (Agak Tebal 600)</option>
+                        <option value="bold">Bold (Tebal 700)</option>
+                        <option value="extrabold">Extra Bold (Sangat Tebal 800)</option>
+                      </select>
+                    </div>
+
+                    {/* Pilihan Gaya Huruf: Normal / Miring */}
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                        Gaya Huruf (Font Style)
+                      </label>
+                      <select
+                        value={fontStyle}
+                        onChange={(e) => setFontStyle(e.target.value as any)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none cursor-pointer"
+                      >
+                        <option value="normal">Tegak Normal (Regular)</option>
+                        <option value="italic">Miring (Italic Elegan)</option>
+                      </select>
+                    </div>
+
+                    {/* Pilihan Skala Ukuran Font */}
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                        Skala Ukuran Huruf (Font Size)
+                      </label>
+                      <select
+                        value={fontSizeScale}
+                        onChange={(e) => setFontSizeScale(e.target.value as any)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none cursor-pointer"
+                      >
+                        <option value="normal">Standar (100% Nyaman di HP)</option>
+                        <option value="large">Sedang (+5% Lebih Terbaca)</option>
+                        <option value="xlarge">Besar (+10% Jelas)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-3 rounded-2xl bg-[#4A2810] text-white font-bold text-xs shadow-md hover:bg-[#341A08] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Simpan Pengaturan Tipografi Font</span>
+                  </button>
+                </form>
+              )}
+
+              {/* ===================== TAB 5: INFO BUTIK & PROFIL ===================== */}
+              {activeTab === 'boutique' && (
+                <form onSubmit={handleSaveBoutique} className="space-y-4">
+                  <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-[#FAF5EE] text-[#4A2810] flex items-center justify-center">
+                        <Store className="w-4 h-4 text-[#8B5E3C]" />
+                      </div>
+                      <div>
+                        <h4 className="font-serif font-bold text-xs text-[#3D2314]">
+                          Informasi Butik &amp; Profil Toko
+                        </h4>
+                        <p className="text-[10px] text-[#8C7A6B]">
+                          Atur nama butik, status, jam operasional, dan kontak resmi
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                        Nama / Judul Butik
+                      </label>
+                      <input
+                        type="text"
+                        value={boutiqueTitle}
+                        onChange={(e) => setBoutiqueTitle(e.target.value)}
+                        placeholder="Contoh: Bintang Cake & Cookies"
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                        Subjudul / Tagline Toko
+                      </label>
+                      <input
+                        type="text"
+                        value={boutiqueSubtitle}
+                        onChange={(e) => setBoutiqueSubtitle(e.target.value)}
+                        placeholder="Contoh: Artisan Cake, Brownies & Wijsman Butter Cookies"
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#3D2314] focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                        Status Butik (Tampil dengan Titik Hijau)
+                      </label>
+                      <input
+                        type="text"
+                        value={boutiqueStatus}
+                        onChange={(e) => setBoutiqueStatus(e.target.value)}
+                        placeholder="Contoh: Butik Buka • Melayani Pesanan"
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                          Jam Operasional (Senin - Sabtu)
+                        </label>
+                        <input
+                          type="text"
+                          value={boutiqueHours}
+                          onChange={(e) => setBoutiqueHours(e.target.value)}
+                          placeholder="09:00 - 20:00 WITA"
+                          className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                          Jam Operasional (Minggu / Libur)
+                        </label>
+                        <input
+                          type="text"
+                          value={boutiqueHoursWeekend}
+                          onChange={(e) => setBoutiqueHoursWeekend(e.target.value)}
+                          placeholder="10:00 - 18:00 WITA"
+                          className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                        Alamat Butik &amp; Lokasi Dapur
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={boutiqueAddress}
+                        onChange={(e) => setBoutiqueAddress(e.target.value)}
+                        placeholder="Jl. Cikini Raya No. 42, Menteng, Jakarta Pusat"
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#3D2314] focus:outline-none resize-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                        Nomor WhatsApp Resmi
+                      </label>
+                      <input
+                        type="text"
+                        value={whatsappNumber}
+                        onChange={(e) => setWhatsappNumber(e.target.value)}
+                        placeholder="0821-5873-9760"
+                        className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-mono font-semibold text-[#3D2314] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-3 rounded-2xl bg-[#4A2810] text-white font-bold text-xs shadow-md hover:bg-[#341A08] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Simpan Informasi Butik &amp; Profil</span>
+                  </button>
+                </form>
+              )}
+
+              {/* ===================== TAB 6: LOGO & HERO BANNER ===================== */}
               {activeTab === 'banners' && (
                 <form onSubmit={handleSaveBanners} className="space-y-4">
                   {/* SEKSI 1: LOGO TOKO */}
@@ -1124,7 +1654,6 @@ ON CONFLICT (id) DO NOTHING;
                     </h4>
 
                     <div className="flex items-center gap-3">
-                      {/* Logo Preview */}
                       <div className="w-16 h-16 rounded-full overflow-hidden bg-[#FAF5EE] border-2 border-[#D4A373]/60 flex items-center justify-center shrink-0 shadow-sm">
                         {logoImage ? (
                           <img src={logoImage} alt="Logo Preview" className="w-full h-full object-cover" />
@@ -1206,7 +1735,6 @@ ON CONFLICT (id) DO NOTHING;
                       </div>
                     </div>
 
-                    {/* Tombol Upload & Input URL Hero */}
                     <div>
                       <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
                         Foto Hero Banner
@@ -1287,10 +1815,9 @@ ON CONFLICT (id) DO NOTHING;
                 </form>
               )}
 
-              {/* ===================== TAB 4: QRIS & REKENING BANK ===================== */}
+              {/* ===================== TAB 7: QRIS & REKENING BANK ===================== */}
               {activeTab === 'payments' && (
                 <form onSubmit={handleSavePayments} className="space-y-4">
-                  {/* SEKSI 1: QRIS INSTANT */}
                   <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-3">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-xl bg-[#FAF5EE] text-[#4A2810] flex items-center justify-center">
@@ -1357,7 +1884,6 @@ ON CONFLICT (id) DO NOTHING;
                     </div>
                   </div>
 
-                  {/* SEKSI 2: REKENING BANK TRANSFER */}
                   <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-3">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-xl bg-[#FAF5EE] text-[#4A2810] flex items-center justify-center">
@@ -1410,10 +1936,82 @@ ON CONFLICT (id) DO NOTHING;
                 </form>
               )}
 
-              {/* ===================== TAB 5: KONFIGURASI SUPABASE & SINKRONISASI MULTI-DEVICE ===================== */}
+              {/* ===================== TAB 8: KELOLA ULASAN PELANGGAN ===================== */}
+              {activeTab === 'reviews' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-serif font-bold text-sm text-[#3D2314]">
+                        Daftar Ulasan &amp; Pesan Pelanggan
+                      </h4>
+                      <p className="text-[10px] text-[#8C7A6B]">
+                        Ulasan yang dikirim oleh pengunjung di halaman beranda
+                      </p>
+                    </div>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#FAF5EE] text-[#4A2810]">
+                      {storeConfig.customerReviews?.length || 0} Ulasan
+                    </span>
+                  </div>
+
+                  {storeConfig.customerReviews && storeConfig.customerReviews.length > 0 ? (
+                    <div className="space-y-2.5">
+                      {storeConfig.customerReviews.map((rev) => (
+                        <div
+                          key={rev.id}
+                          className="p-3.5 rounded-2xl bg-white border border-[#E8DACB] shadow-2xs space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-full bg-[#4A2810] text-white text-[11px] font-bold flex items-center justify-center">
+                                {rev.name[0]?.toUpperCase() || 'P'}
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-[#3D2314]">{rev.name}</p>
+                                <p className="text-[10px] text-[#8C7A6B]">{rev.date} • {rev.favoriteProduct || 'Produk Favorit'}</p>
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={() => {
+                                if (confirm(`Hapus ulasan dari "${rev.name}"?`)) {
+                                  deleteCustomerReview(rev.id);
+                                }
+                              }}
+                              className="p-1 rounded text-[#8C7A6B] hover:text-[#A03D2A] cursor-pointer"
+                              title="Hapus Ulasan"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-3 h-3 ${
+                                  i < rev.rating ? 'text-[#E6A117] fill-[#E6A117]' : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+
+                          <p className="text-xs text-[#5C4534] italic bg-[#FAF5EE] p-2.5 rounded-xl border border-[#E8DACB]">
+                            &ldquo;{rev.comment}&rdquo;
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-xs text-[#8C7A6B] bg-white rounded-2xl border border-[#E8DACB]">
+                      Belum ada ulasan pelanggan yang masuk.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ===================== TAB 9: KONFIGURASI SUPABASE ===================== */}
               {activeTab === 'config' && (
                 <div className="space-y-4">
-                  {/* Panduan Sinkronisasi Multi-Device */}
                   <div className="p-4 bg-gradient-to-br from-[#FFFDF9] to-[#F7EFE6] rounded-3xl border border-[#D4A373]/60 space-y-2.5">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-xl bg-[#4A2810] text-[#FFFDF9] flex items-center justify-center">

@@ -15,6 +15,7 @@ export const ProdukPage: React.FC = () => {
     { id: 'cookies', label: 'Cookies' },
     { id: 'brownies', label: 'Brownies' },
     { id: 'hampers', label: 'Hampers' },
+    { id: 'lidah-kucing', label: 'Lidah Kucing' },
     { id: 'custom', label: 'Custom' },
   ];
 

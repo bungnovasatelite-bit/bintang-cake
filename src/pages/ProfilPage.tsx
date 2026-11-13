@@ -20,25 +20,32 @@ export const ProfilPage: React.FC = () => {
   const { isDeviceFrameEnabled, setIsDeviceFrameEnabled } = useNavigation();
   const { openCMS, isAdminLoggedIn, storeConfig } = useCMS();
 
-  const officialWaNumber = '6282158739760';
+  // Bersihkan nomor WhatsApp untuk link wa.me
+  const rawWa = storeConfig.whatsappNumber || '0821-5873-9760';
+  const cleanWaDigits = rawWa.replace(/[^0-9]/g, '');
+  const officialWaNumber = cleanWaDigits.startsWith('0')
+    ? `62${cleanWaDigits.slice(1)}`
+    : cleanWaDigits.startsWith('62')
+    ? cleanWaDigits
+    : `62${cleanWaDigits}`;
 
   return (
     <div className="space-y-4 pb-8">
-      {/* 1. Header Butik Bintang Cake (Bersih tanpa profil palsu) */}
+      {/* 1. Header Butik Bintang Cake (Dinamis dari Pengaturan CMS) */}
       <section className="p-5 rounded-3xl bg-gradient-to-br from-[#FFFDFB] via-[#FAF5EE] to-[#F5EFE6] border border-[#EBDCCF] shadow-sm text-center space-y-3">
         <div className="flex flex-col items-center justify-center">
           <BrandLogo size={60} className="shadow-md mb-2" />
           <h2 className="font-serif font-bold text-lg text-[#3D2314]">
-            Bintang Cake &amp; Cookies
+            {storeConfig.boutiqueTitle || 'Bintang Cake & Cookies'}
           </h2>
           <p className="text-xs text-[#8B6244] font-medium tracking-wide">
-            Artisan Cake, Brownies &amp; Wijsman Butter Cookies
+            {storeConfig.boutiqueSubtitle || 'Artisan Cake, Brownies & Wijsman Butter Cookies'}
           </p>
         </div>
 
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E3EFE3] text-[#2C6E49] border border-[#C5DEC5] text-[10.5px] font-bold">
           <span className="w-2 h-2 rounded-full bg-[#2C6E49] animate-pulse" />
-          <span>Butik Buka • Melayani Pesanan</span>
+          <span>{storeConfig.boutiqueStatus || 'Butik Buka • Melayani Pesanan'}</span>
         </div>
       </section>
 
@@ -58,10 +65,10 @@ export const ProfilPage: React.FC = () => {
           <div>
             <p className="text-xs font-bold text-[#3D2314]">WhatsApp Bintang Cake</p>
             <p className="text-[11px] font-mono text-[#4A2810] font-semibold mt-0.5">
-              0821-5873-9760
+              {rawWa}
             </p>
             <p className="text-[10px] text-[#8C7A6B] mt-0.5">
-              Konsultasi kue ulang tahun, hampers &amp; konfirmasi transfer
+              Konsultasi pesanan, hampers &amp; konfirmasi pembayaran
             </p>
           </div>
 
@@ -83,19 +90,19 @@ export const ProfilPage: React.FC = () => {
           <Clock className="w-4 h-4 text-[#8B5E3C]" />
           <span>Jam Operasional &amp; Pengambilan</span>
         </div>
-        <div className="p-3 rounded-2xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#5C4534] space-y-1">
+        <div className="p-3 rounded-2xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#5C4534] space-y-1.5">
           <div className="flex justify-between">
             <span>Senin - Sabtu</span>
             <span className="font-bold text-[#3D2314]">{storeConfig.boutiqueHours || '09:00 - 20:00 WITA'}</span>
           </div>
           <div className="flex justify-between">
             <span>Minggu / Hari Libur</span>
-            <span className="font-bold text-[#3D2314]">10:00 - 18:00 WITA</span>
+            <span className="font-bold text-[#3D2314]">{storeConfig.boutiqueHoursWeekend || '10:00 - 18:00 WITA'}</span>
           </div>
         </div>
       </section>
 
-      {/* 4. Menu Informasi & Bantuan */}
+      {/* 4. Menu Informasi & Alamat Butik */}
       <section className="rounded-3xl bg-[#FFFDFB] border border-[#EFE5D9] shadow-sm divide-y divide-[#F5EFE6] overflow-hidden">
         <a
           href={`https://wa.me/${officialWaNumber}?text=Halo%20Bintang%20Cake,%20saya%20ingin%20tanya%20alamat%20lokasi%20pengambilan.`}
@@ -104,10 +111,13 @@ export const ProfilPage: React.FC = () => {
           className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-[#FAF5EE] transition-colors text-left"
         >
           <div className="flex items-center gap-3">
-            <MapPin className="w-4 h-4 text-[#8C7A6B]" />
-            <span className="text-xs font-semibold text-[#3D2314]">Alamat &amp; Panduan Rute Butik</span>
+            <MapPin className="w-4 h-4 text-[#8C7A6B] shrink-0" />
+            <div>
+              <span className="text-xs font-semibold text-[#3D2314] block">Alamat Butik &amp; Dapur</span>
+              <span className="text-[10px] text-[#8C7A6B]">{storeConfig.boutiqueAddress || 'Jl. Cikini Raya No. 42, Menteng, Jakarta Pusat'}</span>
+            </div>
           </div>
-          <ChevronRight className="w-4 h-4 text-[#A8988B]" />
+          <ChevronRight className="w-4 h-4 text-[#A8988B] shrink-0" />
         </a>
 
         <a
@@ -117,21 +127,21 @@ export const ProfilPage: React.FC = () => {
           className="w-full px-4 py-3.5 flex items-center justify-between hover:bg-[#FAF5EE] transition-colors text-left"
         >
           <div className="flex items-center gap-3">
-            <Heart className="w-4 h-4 text-[#8C7A6B]" />
+            <Heart className="w-4 h-4 text-[#8C7A6B] shrink-0" />
             <span className="text-xs font-semibold text-[#3D2314]">Pesanan Kustom &amp; Bingkisan Hari Raya</span>
           </div>
-          <ChevronRight className="w-4 h-4 text-[#A8988B]" />
+          <ChevronRight className="w-4 h-4 text-[#A8988B] shrink-0" />
         </a>
 
         <div className="px-4 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Store className="w-4 h-4 text-[#8C7A6B]" />
+            <Store className="w-4 h-4 text-[#8C7A6B] shrink-0" />
             <div>
-              <span className="text-xs font-semibold text-[#3D2314] block">Jaminan Kualitas Wijsman</span>
+              <span className="text-xs font-semibold text-[#3D2314] block">Jaminan Kualitas Wijsman Murni</span>
               <span className="text-[10px] text-[#8C7A6B]">100% bahan premium tanpa bahan pengawet buatan</span>
             </div>
           </div>
-          <ShieldCheck className="w-4 h-4 text-[#2C6E49]" />
+          <ShieldCheck className="w-4 h-4 text-[#2C6E49] shrink-0" />
         </div>
       </section>
 
@@ -179,7 +189,7 @@ export const ProfilPage: React.FC = () => {
               )}
             </div>
             <p className="text-[10.5px] text-[#CBB296]">
-              Kelola produk, banner hero, pesanan &amp; QRIS
+              Kelola produk, banner promo, pesanan &amp; info butik
             </p>
           </div>
         </div>

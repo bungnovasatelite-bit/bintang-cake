@@ -43,39 +43,8 @@ export interface CreateOrderPayload {
   items: OrderItemRecord[];
 }
 
-// Initial sample orders for preview
-const INITIAL_SAMPLE_ORDERS: OrderRecord[] = [
-  {
-    id: 'BC-9842',
-    customerName: 'Siti Rahmawati',
-    customerPhone: '0812-3456-7890',
-    deliveryMode: 'pickup',
-    scheduleTime: '15 Nov 2026, 14:00 WITA',
-    deliveryAddress: 'Ambil di Butik Utama Cikini',
-    subtotal: 250000,
-    discount: 0,
-    totalAmount: 250000,
-    paymentMethod: 'qris',
-    status: 'processing',
-    createdAt: new Date().toISOString(),
-    items: [
-      {
-        productId: 'prod-semprit',
-        productName: 'Semprit Wijsman',
-        price: 100000,
-        quantity: 2,
-        selectedSize: 'Toples Mika Ulir 200 gr',
-      },
-      {
-        productId: 'prod-8',
-        productName: 'Vanilla Cheese Cake',
-        price: 150000,
-        quantity: 1,
-        selectedSize: 'Diameter 16 cm',
-      }
-    ]
-  }
-];
+// Daftar pesanan awal kosong (hanya pesanan asli dari calon pembeli yang akan dicatat)
+const INITIAL_SAMPLE_ORDERS: OrderRecord[] = [];
 
 export async function fetchProducts(): Promise<{ products: Product[]; fromSupabase: boolean }> {
   if (!isSupabaseConfigured()) {
@@ -119,7 +88,20 @@ export async function fetchProducts(): Promise<{ products: Product[]; fromSupaba
  */
 export async function fetchOrders(): Promise<OrderRecord[]> {
   const localOrdersStr = localStorage.getItem('bintang_orders');
-  let localOrders: OrderRecord[] = localOrdersStr ? JSON.parse(localOrdersStr) : INITIAL_SAMPLE_ORDERS;
+  let localOrders: OrderRecord[] = [];
+  if (localOrdersStr) {
+    try {
+      const parsed: OrderRecord[] = JSON.parse(localOrdersStr);
+      // Hapus pesanan dummy lama Siti Rahmawati agar tidak pernah muncul lagi
+      localOrders = parsed.filter(o =>
+        !o.customerName?.toLowerCase().includes('siti rahmawati') &&
+        o.id !== 'BC-9842'
+      );
+      localStorage.setItem('bintang_orders', JSON.stringify(localOrders));
+    } catch (e) {
+      console.warn(e);
+    }
+  }
 
   if (!isSupabaseConfigured()) {
     return localOrders;

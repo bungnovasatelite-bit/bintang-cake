@@ -1,9 +1,11 @@
 export type NavTab = 'beranda' | 'produk' | 'keranjang' | 'profil';
 
+export type ProductCategory = 'cake' | 'cookies' | 'brownies' | 'hampers' | 'lidah-kucing' | 'custom';
+
 export interface Product {
   id: string;
   name: string;
-  category: 'cake' | 'cookies' | 'brownies' | 'hampers' | 'custom';
+  category: ProductCategory;
   packageType?: string;
   price: number;
   rating: number;

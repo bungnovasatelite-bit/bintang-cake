@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ArrowRight,
   ShieldCheck,
@@ -10,7 +10,13 @@ import {
   Cookie,
   Coffee,
   Gift,
-  Palette
+  Palette,
+  Star,
+  MessageSquareQuote,
+  PlusCircle,
+  X,
+  Send,
+  Heart
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
 import { useCMS } from '../context/CMSContext';
@@ -18,7 +24,15 @@ import { ProductCard } from '../components/common/ProductCard';
 
 export const BerandaPage: React.FC = () => {
   const { setActiveTab, setSelectedCategory } = useNavigation();
-  const { products, storeConfig } = useCMS();
+  const { products, storeConfig, addCustomerReview } = useCMS();
+
+  // State untuk Form Ulasan Pelanggan
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewerName, setReviewerName] = useState('');
+  const [reviewerProduct, setReviewerProduct] = useState('');
+  const [reviewerRating, setReviewerRating] = useState(5);
+  const [reviewerComment, setReviewerComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   const bestSellers = products.filter((p) => p.badge === 'BEST SELLER').slice(0, 4);
 
@@ -27,8 +41,41 @@ export const BerandaPage: React.FC = () => {
     { id: 'cookies', label: 'Cookies', icon: Cookie },
     { id: 'brownies', label: 'Brownies', icon: Coffee },
     { id: 'hampers', label: 'Hampers', icon: Gift },
+    { id: 'lidah-kucing', label: 'Lidah Kucing', icon: Sparkles },
     { id: 'custom', label: 'Custom', icon: Palette },
   ];
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewerName.trim() || !reviewerComment.trim()) return;
+
+    setIsSubmittingReview(true);
+    await addCustomerReview({
+      name: reviewerName.trim(),
+      comment: reviewerComment.trim(),
+      rating: reviewerRating,
+      favoriteProduct: reviewerProduct.trim() || undefined,
+    });
+    setIsSubmittingReview(false);
+    setIsReviewModalOpen(false);
+    setReviewerName('');
+    setReviewerProduct('');
+    setReviewerComment('');
+    setReviewerRating(5);
+  };
+
+  const reviews = storeConfig.customerReviews && storeConfig.customerReviews.length > 0
+    ? storeConfig.customerReviews
+    : [
+        {
+          id: 'rev-def-1',
+          name: 'Ibu Ratna Hendrawan',
+          comment: 'Lidah Kucing dan Nastarnya luar biasa renyah dan harum mentega Wijsman asli! Kemasan toplesnya sangat rapi dan eksklusif.',
+          rating: 5,
+          favoriteProduct: 'Lidah Kucing & Nastar Wijsman',
+          date: '10 Nov 2026'
+        }
+      ];
 
   return (
     <div className="space-y-6 pb-6">
@@ -62,7 +109,7 @@ export const BerandaPage: React.FC = () => {
           <div className="mt-5 flex items-center gap-2.5 flex-wrap">
             <button
               onClick={() => setActiveTab('produk')}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#FFFDF9] text-[#3D2314] font-bold text-xs hover:bg-[#FAF5EE] active:scale-95 transition-all shadow-md"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#FFFDF9] text-[#3D2314] font-bold text-xs hover:bg-[#FAF5EE] active:scale-95 transition-all shadow-md cursor-pointer"
             >
               Belanja Sekarang
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />
@@ -70,7 +117,7 @@ export const BerandaPage: React.FC = () => {
 
             <button
               onClick={() => setActiveTab('profil')}
-              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-[#FFFDF9]/15 backdrop-blur-md border border-[#FAF5EE]/30 text-[#FAF5EE] font-semibold text-xs hover:bg-[#FFFDF9]/25 active:scale-95 transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-[#FFFDF9]/15 backdrop-blur-md border border-[#FAF5EE]/30 text-[#FAF5EE] font-semibold text-xs hover:bg-[#FFFDF9]/25 active:scale-95 transition-all cursor-pointer"
             >
               <MessageCircle className="w-4 h-4" />
               Hubungi Kami
@@ -79,7 +126,7 @@ export const BerandaPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. Kategori Pilihan */}
+      {/* 2. Kategori Pilihan (Termasuk Lidah Kucing) */}
       <section className="px-1">
         <div className="flex items-center justify-between mb-3 px-1">
           <div>
@@ -90,13 +137,13 @@ export const BerandaPage: React.FC = () => {
           </div>
           <button
             onClick={() => setActiveTab('produk')}
-            className="text-xs font-semibold text-[#8B5E3C] hover:text-[#5C381E] flex items-center gap-0.5 transition-colors"
+            className="text-xs font-semibold text-[#8B5E3C] hover:text-[#5C381E] flex items-center gap-0.5 transition-colors cursor-pointer"
           >
             Lihat Semua &rsaquo;
           </button>
         </div>
 
-        <div className="grid grid-cols-5 gap-2 sm:gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-2.5">
           {categories.map((cat) => {
             const Icon = cat.icon;
             return (
@@ -106,12 +153,12 @@ export const BerandaPage: React.FC = () => {
                   setSelectedCategory(cat.id);
                   setActiveTab('produk');
                 }}
-                className="flex flex-col items-center p-2.5 rounded-2xl bg-[#FFFDFB] border border-[#EFE5D9] shadow-sm hover:shadow-md hover:border-[#D4A373] active:scale-95 transition-all group"
+                className="flex flex-col items-center p-2.5 rounded-2xl bg-[#FFFDFB] border border-[#EFE5D9] shadow-sm hover:shadow-md hover:border-[#D4A373] active:scale-95 transition-all group cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-xl bg-[#FAF5EE] text-[#4A2810] flex items-center justify-center group-hover:bg-[#4A2810] group-hover:text-[#FFFDFB] transition-colors">
                   <Icon className="w-5 h-5 stroke-[2]" />
                 </div>
-                <span className="text-[11px] font-semibold text-[#5A4535] mt-1.5">
+                <span className="text-[11px] font-semibold text-[#5A4535] mt-1.5 text-center leading-tight">
                   {cat.label}
                 </span>
               </button>
@@ -120,38 +167,40 @@ export const BerandaPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 3. Flash Sale Promo Banner */}
-      <section className="px-1">
-        <div className="rounded-3xl p-4 bg-gradient-to-r from-[#FDECE8] via-[#FAF0EB] to-[#FCEEE9] border border-[#F5C7B9] flex flex-col justify-between relative overflow-hidden shadow-sm">
-          <div className="relative z-10">
-            <div className="inline-flex items-center gap-1 text-[10px] font-bold text-[#A2442C] bg-[#FCD7CD] px-2.5 py-0.5 rounded-full mb-2 uppercase tracking-wide">
-              <span>{storeConfig.promoTag}</span>
+      {/* 3. Promo Flash Sale Banner (Dapat Diaktifkan / Diedit dari CMS) */}
+      {storeConfig.isPromoActive !== false && (
+        <section className="px-1">
+          <div className="rounded-3xl p-4 bg-gradient-to-r from-[#FDECE8] via-[#FAF0EB] to-[#FCEEE9] border border-[#F5C7B9] flex flex-col justify-between relative overflow-hidden shadow-sm">
+            <div className="relative z-10">
+              <div className="inline-flex items-center gap-1 text-[10px] font-bold text-[#A2442C] bg-[#FCD7CD] px-2.5 py-0.5 rounded-full mb-2 uppercase tracking-wide">
+                <span>{storeConfig.promoTag}</span>
+              </div>
+              <h4 className="font-serif font-bold text-base text-[#3D2314]">
+                {storeConfig.promoTitle}
+              </h4>
+              <p className="text-xs text-[#7A5844] mt-1 leading-snug">
+                {storeConfig.promoSubtitle}
+              </p>
             </div>
-            <h4 className="font-serif font-bold text-base text-[#3D2314]">
-              {storeConfig.promoTitle}
-            </h4>
-            <p className="text-xs text-[#7A5844] mt-1 leading-snug">
-              {storeConfig.promoSubtitle}
-            </p>
-          </div>
 
-          <div className="mt-3 relative z-10 flex items-center justify-between">
-            <button
-              onClick={() => setActiveTab('produk')}
-              className="px-3.5 py-1.5 rounded-xl bg-[#4A2810] text-white text-xs font-semibold hover:bg-[#341A08] active:scale-95 transition-all shadow-sm flex items-center gap-1.5"
-            >
-              Klaim Promo
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-            <span className="text-[11px] font-medium text-[#8C7A6B]">
-              *S&K berlaku
-            </span>
-          </div>
+            <div className="mt-3 relative z-10 flex items-center justify-between">
+              <button
+                onClick={() => setActiveTab('produk')}
+                className="px-3.5 py-1.5 rounded-xl bg-[#4A2810] text-white text-xs font-semibold hover:bg-[#341A08] active:scale-95 transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+              >
+                Klaim Promo
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-[11px] font-medium text-[#8C7A6B]">
+                *S&amp;K berlaku
+              </span>
+            </div>
 
-          {/* Decorative background shape */}
-          <div className="absolute -bottom-6 -right-6 w-28 h-28 rounded-full bg-[#F5C7B9]/30 pointer-events-none" />
-        </div>
-      </section>
+            {/* Decorative background shape */}
+            <div className="absolute -bottom-6 -right-6 w-28 h-28 rounded-full bg-[#F5C7B9]/30 pointer-events-none" />
+          </div>
+        </section>
+      )}
 
       {/* 4. Produk Best Seller */}
       <section className="px-1">
@@ -164,7 +213,7 @@ export const BerandaPage: React.FC = () => {
           </div>
           <button
             onClick={() => setActiveTab('produk')}
-            className="text-xs font-semibold text-[#8B5E3C] hover:text-[#5C381E] flex items-center gap-0.5"
+            className="text-xs font-semibold text-[#8B5E3C] hover:text-[#5C381E] flex items-center gap-0.5 cursor-pointer"
           >
             Semua &rsaquo;
           </button>
@@ -178,7 +227,7 @@ export const BerandaPage: React.FC = () => {
       </section>
 
       {/* 5. Mengapa Memilih Kami? */}
-      <section className="px-1 py-4">
+      <section className="px-1 py-2">
         <div className="text-center mb-4">
           <h3 className="font-serif font-bold text-base sm:text-lg text-[#3D2314]">
             Mengapa Memilih Kami?
@@ -195,10 +244,10 @@ export const BerandaPage: React.FC = () => {
             </div>
             <div>
               <h4 className="text-xs font-bold text-[#3D2314]">
-                100% Bahan Premium & Halal
+                100% Bahan Premium &amp; Halal
               </h4>
               <p className="text-[11px] text-[#7A6657] mt-0.5 leading-snug">
-                Menggunakan mentega murni Wisman, cokelat couverture Belgia, dan sertifikasi Halal resmi.
+                Menggunakan mentega murni Wijsman, cokelat couverture Belgia, dan keju Edam kualitas terbaik.
               </p>
             </div>
           </div>
@@ -223,41 +272,210 @@ export const BerandaPage: React.FC = () => {
             </div>
             <div>
               <h4 className="text-xs font-bold text-[#3D2314]">
-                Pengiriman Aman & Cepat
+                Pengiriman Aman &amp; Cepat
               </h4>
               <p className="text-[11px] text-[#7A6657] mt-0.5 leading-snug">
-                Kemasan rigid box kokoh dengan pendingin aman untuk pengiriman instan se-Jabodetabek.
+                Kemasan toples mika ulir kokoh dan box pengaman khusus untuk keutuhan kue sampai tujuan.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 6. Testimonial Snippet */}
+      {/* 6. Cerita Pelanggan (Buka untuk semua pelanggan meninggalkan pesan, tulisan demo dihilangkan) */}
       <section className="px-1">
-        <div className="p-4 rounded-3xl bg-[#F7EFE6] border border-[#E8DACB]">
-          <div className="flex items-center justify-between mb-2">
-            <span className="font-serif font-bold text-sm text-[#3D2314]">
-              Cerita Pelanggan
-            </span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EAD1B6] text-[#4A2810]">
-              Demo
-            </span>
+        <div className="p-4 rounded-3xl bg-[#F7EFE6] border border-[#E8DACB] shadow-sm space-y-3.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageSquareQuote className="w-4 h-4 text-[#8B5E3C]" />
+              <div>
+                <h3 className="font-serif font-bold text-sm text-[#3D2314]">
+                  Cerita Pelanggan
+                </h3>
+                <p className="text-[10px] text-[#8C7A6B]">
+                  Pesan &amp; pengalaman manis penikmat Bintang Cake
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsReviewModalOpen(true)}
+              className="px-2.5 py-1.5 rounded-xl bg-[#4A2810] hover:bg-[#341A08] text-white text-[10.5px] font-bold flex items-center gap-1 shadow-xs active:scale-95 transition-all cursor-pointer"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>Tulis Pesan</span>
+            </button>
           </div>
-          <p className="text-xs text-[#5C4534] italic leading-relaxed">
-            &ldquo;Nastar Wismannya bener-bener lumer di lidah! Selai nanasnya asam manis pas, wangi butternya mewah banget.&rdquo;
-          </p>
-          <div className="flex items-center gap-2 mt-3">
-            <div className="w-6 h-6 rounded-full bg-[#4A2810] text-white text-[10px] font-bold flex items-center justify-center">
-              AR
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-[#3D2314] leading-none">Anisa Rahma</p>
-              <p className="text-[9.5px] text-[#8C7A6B]">Jakarta Selatan</p>
-            </div>
+
+          {/* Review List */}
+          <div className="space-y-2.5">
+            {reviews.map((rev) => {
+              const initials = rev.name
+                .split(' ')
+                .map((n) => n[0])
+                .slice(0, 2)
+                .join('')
+                .toUpperCase();
+
+              return (
+                <div
+                  key={rev.id}
+                  className="p-3 rounded-2xl bg-white border border-[#E8DACB] space-y-1.5 shadow-2xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-3 h-3 ${
+                            i < rev.rating
+                              ? 'text-[#E6A117] fill-[#E6A117]'
+                              : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[9.5px] text-[#8C7A6B]">{rev.date}</span>
+                  </div>
+
+                  <p className="text-xs text-[#5C4534] italic leading-relaxed">
+                    &ldquo;{rev.comment}&rdquo;
+                  </p>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-[#F5EFE6]">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-[#4A2810] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                        {initials}
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-[#3D2314] leading-none">
+                          {rev.name}
+                        </p>
+                        {rev.favoriteProduct && (
+                          <p className="text-[9.5px] text-[#8B6244] mt-0.5">
+                            {rev.favoriteProduct}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Heart className="w-3.5 h-3.5 text-[#A2442C] fill-[#A2442C]/20" />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
+
+      {/* Modal / Form Tulis Pesan & Ulasan Pelanggan */}
+      {isReviewModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-sm bg-[#FAF5EE] rounded-3xl border border-[#E8DACB] shadow-2xl overflow-hidden p-5 space-y-3.5">
+            <div className="flex items-center justify-between border-b border-[#E8DACB] pb-2.5">
+              <div className="flex items-center gap-2">
+                <MessageSquareQuote className="w-4 h-4 text-[#8B5E3C]" />
+                <h4 className="font-serif font-bold text-sm text-[#3D2314]">
+                  Tinggalkan Pesan &amp; Ulasan
+                </h4>
+              </div>
+              <button
+                onClick={() => setIsReviewModalOpen(false)}
+                className="p-1 rounded-full text-[#8C7A6B] hover:text-[#3D2314] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleReviewSubmit} className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-bold text-[#4A2810] mb-1">
+                  Nama Anda *
+                </label>
+                <input
+                  type="text"
+                  value={reviewerName}
+                  onChange={(e) => setReviewerName(e.target.value)}
+                  placeholder="Contoh: Ibu Rina / Bpk. Rudi"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none focus:border-[#4A2810]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#4A2810] mb-1">
+                  Produk Favorit (Opsional)
+                </label>
+                <input
+                  type="text"
+                  value={reviewerProduct}
+                  onChange={(e) => setReviewerProduct(e.target.value)}
+                  placeholder="Contoh: Lidah Kucing Wijsman / Nastar"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none focus:border-[#4A2810]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#4A2810] mb-1">
+                  Rating Bintang
+                </label>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewerRating(star)}
+                      className="p-1 cursor-pointer transition-transform hover:scale-110"
+                    >
+                      <Star
+                        className={`w-5 h-5 ${
+                          star <= reviewerRating
+                            ? 'text-[#E6A117] fill-[#E6A117]'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                  <span className="text-xs font-bold text-[#4A2810] ml-1">
+                    {reviewerRating}.0
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#4A2810] mb-1">
+                  Pesan atau Ulasan Rasa *
+                </label>
+                <textarea
+                  rows={3}
+                  value={reviewerComment}
+                  onChange={(e) => setReviewerComment(e.target.value)}
+                  placeholder="Bagikan pengalaman rasa, aroma mentega Wijsman, atau kesan pesan Anda..."
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-[#E8DACB] text-xs text-[#3D2314] focus:outline-none focus:border-[#4A2810] resize-none"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsReviewModalOpen(false)}
+                  className="flex-1 py-2 rounded-xl bg-white border border-[#E8DACB] text-xs font-semibold text-[#8C7A6B] cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReview}
+                  className="flex-1 py-2 rounded-xl bg-[#4A2810] hover:bg-[#341A08] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSubmittingReview ? 'Mengirim...' : 'Kirim Ulasan'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* 7. Consultation Call to Action */}
       <section className="px-1">
@@ -278,7 +496,7 @@ export const BerandaPage: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('profil')}
-            className="px-3 py-2 rounded-xl bg-[#4A2810] text-[#FAF5EE] text-xs font-bold hover:bg-[#341A08] active:scale-95 transition-all shrink-0 flex items-center gap-1"
+            className="px-3 py-2 rounded-xl bg-[#4A2810] text-[#FAF5EE] text-xs font-bold hover:bg-[#341A08] active:scale-95 transition-all shrink-0 flex items-center gap-1 cursor-pointer"
           >
             Chat
             <ArrowRight className="w-3.5 h-3.5" />

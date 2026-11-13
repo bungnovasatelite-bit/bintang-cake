@@ -19,19 +19,42 @@ import {
   pushCloudStoreData
 } from '../lib/cloudSync';
 
+export interface CustomerReview {
+  id: string;
+  name: string;
+  comment: string;
+  rating: number;
+  favoriteProduct?: string;
+  date: string;
+}
+
 export interface StoreConfig {
   logoImage?: string;
   heroTag: string;
   heroTitle: string;
   heroSubtitle: string;
   heroImage: string;
+  // Promo / Flash Sale
+  isPromoActive: boolean;
   promoTag: string;
   promoTitle: string;
   promoSubtitle: string;
   promoDiscount: string;
+  // Info Butik & Profil
+  boutiqueTitle: string;
+  boutiqueSubtitle: string;
+  boutiqueStatus: string;
   boutiqueAddress: string;
   boutiqueHours: string;
+  boutiqueHoursWeekend: string;
   whatsappNumber: string;
+  // Tipografi & Gaya Font
+  fontFamily: 'serif' | 'sans' | 'classic' | 'playfair';
+  fontWeight: 'normal' | 'semibold' | 'bold' | 'extrabold';
+  fontStyle: 'normal' | 'italic';
+  fontSizeScale: 'normal' | 'large' | 'xlarge';
+  // Ulasan Pelanggan
+  customerReviews: CustomerReview[];
   // Pengaturan Pembayaran (QRIS & Transfer Bank)
   qrisImage?: string;
   qrisCode?: string;
@@ -39,19 +62,51 @@ export interface StoreConfig {
   bankAccount: string;
 }
 
-const DEFAULT_STORE_CONFIG: StoreConfig = {
+export const DEFAULT_STORE_CONFIG: StoreConfig = {
   logoImage: '',
   heroTag: 'PARTNER TO ENJOY YOUR DAY',
   heroTitle: 'Bintang Cake',
   heroSubtitle: 'Rayakan setiap kebersamaan berharga dengan kreasi kue lembut dan kue kering mentega Wijsman premium.',
   heroImage: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
+  // Promo / Flash Sale
+  isPromoActive: true,
   promoTag: '⚡ FLASH SALE • Berakhir 2 hari lagi',
   promoTitle: 'Dapatkan Souvenir Cantik',
   promoSubtitle: 'Dapatkan Souvenir Cantik setiap Pembelian sejumlah Rp 750.000',
   promoDiscount: 'Rp 5.000',
+  // Info Butik & Profil
+  boutiqueTitle: 'Bintang Cake & Cookies',
+  boutiqueSubtitle: 'Artisan Cake, Brownies & Wijsman Butter Cookies',
+  boutiqueStatus: 'Butik Buka • Melayani Pesanan',
   boutiqueAddress: 'Jl. Cikini Raya No. 42, Menteng, Jakarta Pusat',
   boutiqueHours: '09:00 - 20:00 WITA',
+  boutiqueHoursWeekend: '10:00 - 18:00 WITA',
   whatsappNumber: '0821-5873-9760',
+  // Tipografi
+  fontFamily: 'playfair',
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  fontSizeScale: 'normal',
+  // Ulasan Pelanggan
+  customerReviews: [
+    {
+      id: 'rev-1',
+      name: 'Ibu Ratna Hendrawan',
+      comment: 'Lidah Kucing dan Nastarnya luar biasa renyah dan harum mentega Wijsman asli! Keluarga besar di rumah suka sekali, kemasan toplesnya juga sangat rapi dan eksklusif.',
+      rating: 5,
+      favoriteProduct: 'Lidah Kucing & Nastar Wijsman',
+      date: '10 Nov 2026'
+    },
+    {
+      id: 'rev-2',
+      name: 'Bapak Hendra Wijaya',
+      comment: 'Pesan cake custom untuk ulang tahun istri, dekorasinya sangat cantik dan cakenya lembut tidak bikin eneg. Pelayanan via WhatsApp sangat ramah dan responsif!',
+      rating: 5,
+      favoriteProduct: 'Vanilla Cheese Cake',
+      date: '08 Nov 2026'
+    }
+  ],
+  // Pengaturan Pembayaran
   qrisImage: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=400&q=80',
   qrisCode: 'NMID: ID1020304050607 - Bintang Cake',
   bankName: 'BCA (Bank Central Asia)',
@@ -61,6 +116,7 @@ const DEFAULT_STORE_CONFIG: StoreConfig = {
 interface CMSContextType {
   isAdminLoggedIn: boolean;
   isCMSOpen: boolean;
+  isInitialLoading: boolean;
   openCMS: () => void;
   closeCMS: () => void;
   openCMSToEditProduct: (p: Product) => void;
@@ -77,6 +133,8 @@ interface CMSContextType {
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
+  addCustomerReview: (review: Omit<CustomerReview, 'id' | 'date'>) => Promise<void>;
+  deleteCustomerReview: (id: string) => Promise<void>;
   syncAllToCloud: () => Promise<void>;
   resetToDefault: () => void;
   isSyncing: boolean;
@@ -102,6 +160,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isCMSOpen, setIsCMSOpen] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
 
   // Target edit & add produk langsung dari Katalog
   const [editingProductTarget, setEditingProductTarget] = useState<Product | null>(null);
@@ -152,19 +211,24 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [isAdminLoggedIn]);
 
   // SINKRONISASI DATA TOKO & PRODUK DARI CLOUD KE SEMUA PERANGKAT (HP, LAPTOP, DESKTOP)
+  // Menghilangkan tampilan dasar berkedip (FOUC) saat dibuka pertama kali
   useEffect(() => {
+    let isMounted = true;
+
     async function loadCloudData() {
-      // 1. Ambil data termutakhir dari Cloud Store (GitHub Cloud JSON)
       try {
+        // 1. Ambil data termutakhir dari Cloud Store (GitHub Cloud JSON)
         const cloudData = await fetchCloudStoreData();
         if (cloudData && cloudData.products && cloudData.products.length > 0) {
-          setProducts(cloudData.products);
-          setStoreConfig((prev) => ({ ...prev, ...cloudData.storeConfig }));
-          try {
-            localStorage.setItem('bintang_products', JSON.stringify(cloudData.products));
-            localStorage.setItem('bintang_store_config', JSON.stringify(cloudData.storeConfig));
-          } catch (e) {
-            console.warn(e);
+          if (isMounted) {
+            setProducts(cloudData.products);
+            setStoreConfig((prev) => ({ ...prev, ...cloudData.storeConfig }));
+            try {
+              localStorage.setItem('bintang_products', JSON.stringify(cloudData.products));
+              localStorage.setItem('bintang_store_config', JSON.stringify({ ...DEFAULT_STORE_CONFIG, ...cloudData.storeConfig }));
+            } catch (e) {
+              console.warn(e);
+            }
           }
         }
       } catch (err) {
@@ -180,7 +244,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             .eq('id', 'bintang_store')
             .single();
 
-          if (storeData && storeData.config) {
+          if (storeData && storeData.config && isMounted) {
             setStoreConfig((prev) => ({ ...prev, ...storeData.config }));
           }
 
@@ -189,7 +253,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             .select('*')
             .order('created_at', { ascending: true });
 
-          if (!prodErr && prodData && prodData.length > 0) {
+          if (!prodErr && prodData && prodData.length > 0 && isMounted) {
             const mapped: Product[] = prodData.map((item) => ({
               id: item.id,
               name: item.name,
@@ -209,9 +273,25 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           console.warn('Supabase DB info:', err);
         }
       }
+
+      if (isMounted) {
+        setIsInitialLoading(false);
+      }
     }
 
     loadCloudData();
+
+    // Fallback timer maksimal 800ms agar aplikasi langsung tampil lancar
+    const timeout = setTimeout(() => {
+      if (isMounted) {
+        setIsInitialLoading(false);
+      }
+    }, 800);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+    };
   }, []);
 
   const openCMS = () => {
@@ -412,6 +492,26 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTimeout(() => setSyncNotice(null), 3500);
   };
 
+  // Ulasan Pelanggan (Cerita Pelanggan)
+  const addCustomerReview = async (reviewData: Omit<CustomerReview, 'id' | 'date'>) => {
+    const newRev: CustomerReview = {
+      ...reviewData,
+      id: `rev-${Date.now()}`,
+      date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+    };
+    const updatedReviews = [newRev, ...(storeConfig.customerReviews || [])];
+    await updateStoreConfig({ customerReviews: updatedReviews });
+    setSyncNotice('Terima kasih! Ulasan & pesan Anda berhasil dikirim.');
+    setTimeout(() => setSyncNotice(null), 3500);
+  };
+
+  const deleteCustomerReview = async (reviewId: string) => {
+    const updatedReviews = (storeConfig.customerReviews || []).filter(r => r.id !== reviewId);
+    await updateStoreConfig({ customerReviews: updatedReviews });
+    setSyncNotice('Ulasan berhasil dihapus.');
+    setTimeout(() => setSyncNotice(null), 3000);
+  };
+
   // Tombol 1-Klik Sinkronisasi Manual ke Cloud
   const syncAllToCloud = async () => {
     setIsSyncing(true);
@@ -471,6 +571,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         isAdminLoggedIn,
         isCMSOpen,
+        isInitialLoading,
         openCMS,
         closeCMS,
         openCMSToEditProduct,
@@ -487,6 +588,8 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addProduct,
         updateProduct,
         deleteProduct,
+        addCustomerReview,
+        deleteCustomerReview,
         syncAllToCloud,
         resetToDefault,
         isSyncing,

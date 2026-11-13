@@ -68,10 +68,12 @@ export interface SupabaseHealthCheckResult {
   latencyMs?: number;
 }
 
-export async function testSupabaseConnection(): Promise<SupabaseHealthCheckResult> {
-  const { url } = getSupabaseCredentials();
+export async function testSupabaseConnection(customUrl?: string, customKey?: string): Promise<SupabaseHealthCheckResult> {
+  const current = getSupabaseCredentials();
+  const url = customUrl !== undefined ? customUrl.trim() : current.url;
+  const key = customKey !== undefined ? customKey.trim() : current.anonKey;
   
-  if (!isSupabaseConfigured()) {
+  if (!url || !key) {
     return {
       isConfigured: false,
       isConnected: false,
@@ -83,7 +85,9 @@ export async function testSupabaseConnection(): Promise<SupabaseHealthCheckResul
   const startTime = performance.now();
 
   try {
-    const client = reinitSupabaseClient();
+    const client = createClient(url, key, {
+      auth: { persistSession: false }
+    });
     const { error } = await client.auth.getSession();
     const latencyMs = Math.round(performance.now() - startTime);
 

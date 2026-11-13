@@ -136,6 +136,18 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: 'Kue sagu keju renyah seketika meleleh di mulut dengan semerbak aroma santan sangrai dan keju panggang gurih.'
   },
   {
+    id: 'prod-lk-1',
+    name: 'Lidah Kucing Keju Wijsman',
+    category: 'lidah-kucing',
+    packageType: 'TOPLES MIKA ULIR 200 GR',
+    price: 55000,
+    rating: 5.0,
+    reviewCount: '190+',
+    badge: 'BEST SELLER',
+    image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=600&q=80',
+    description: 'Kue lidah kucing tipis renyah dan garing dengan taburan keju Edam Belanda dan mentega Wijsman murni.'
+  },
+  {
     id: 'prod-12',
     name: 'Lapis Legit Premium',
     category: 'cake',
@@ -149,11 +161,11 @@ export const INITIAL_PRODUCTS: Product[] = [
 ];
 
 export const INITIAL_USER_PROFILE: UserProfile = {
-  name: 'Siti Rahmawati',
-  phone: '0812-3456-7890',
-  email: 'siti.rahmawati@example.com',
+  name: 'Pelanggan Setia Bintang Cake',
+  phone: '0821-5873-9760',
+  email: 'info@bintangcake.com',
   address: 'Jl. Cikini Raya No. 42, Menteng, Jakarta Pusat',
-  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-  memberTier: 'Gold Member',
-  points: 1250,
+  avatarUrl: '',
+  memberTier: 'Pelanggan Setia',
+  points: 0,
 };
