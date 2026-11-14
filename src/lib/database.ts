@@ -74,6 +74,7 @@ export async function fetchProducts(): Promise<{ products: Product[]; fromSupaba
       image: item.image_url,
       description: item.description,
       sizes: item.sizes,
+      packagingImages: item.packaging_images || undefined,
     }));
 
     return { products: mappedProducts, fromSupabase: true };

@@ -110,7 +110,13 @@ export const CMSModal: React.FC = () => {
   const [pkgPriceMika1000, setPkgPriceMika1000] = useState<number>(217000);
   const [pkgPriceKaca150, setPkgPriceKaca150] = useState<number>(53000);
 
-  // Pengaturan Foto Bentuk Kemasan
+  // Foto Bentuk Kemasan Khusus Produk Ini (Cookies & Lidah Kucing)
+  const [formPkgMinipack, setFormPkgMinipack] = useState<string>('');
+  const [formPkgEkopack, setFormPkgEkopack] = useState<string>('');
+  const [formPkgMika, setFormPkgMika] = useState<string>('');
+  const [formPkgKaca, setFormPkgKaca] = useState<string>('');
+
+  // Pengaturan Foto Bentuk Kemasan Global Bawaan Toko
   const [packagingMinipack, setPackagingMinipack] = useState(storeConfig.packagingImages?.minipack || '');
   const [packagingEkopack, setPackagingEkopack] = useState(storeConfig.packagingImages?.ekopack || '');
   const [packagingMika, setPackagingMika] = useState(storeConfig.packagingImages?.mika || '');
@@ -355,6 +361,10 @@ ON CONFLICT (id) DO NOTHING;
     setFormBadge('NEW ARRIVAL');
     setFormImage('https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=600&q=80');
     setFormDesc('Kue lezat buatan tangan dengan bahan mentega Wijsman kualitas terbaik.');
+    setFormPkgMinipack('');
+    setFormPkgEkopack('');
+    setFormPkgMika('');
+    setFormPkgKaca('');
     applyAutoPackagePrices(defaultPrice);
     setIsEditingProduct(true);
   };
@@ -385,6 +395,11 @@ ON CONFLICT (id) DO NOTHING;
     setPkgPriceMika500(findSizePrice('Toples Mika Ulir 500 gr', std.mika500));
     setPkgPriceMika1000(findSizePrice('Toples Mika Ulir 1000 gr', std.mika1000));
     setPkgPriceKaca150(findSizePrice('Toples Kaca 150 gr', std.kaca150));
+
+    setFormPkgMinipack(p.packagingImages?.minipack || '');
+    setFormPkgEkopack(p.packagingImages?.ekopack || '');
+    setFormPkgMika(p.packagingImages?.mika || '');
+    setFormPkgKaca(p.packagingImages?.kaca || '');
 
     setIsEditingProduct(true);
   };
@@ -519,6 +534,15 @@ ON CONFLICT (id) DO NOTHING;
         ]
       : undefined;
 
+    const computedPackagingImages = isCookieOrLidah
+      ? {
+          minipack: formPkgMinipack.trim() || undefined,
+          ekopack: formPkgEkopack.trim() || undefined,
+          mika: formPkgMika.trim() || undefined,
+          kaca: formPkgKaca.trim() || undefined,
+        }
+      : undefined;
+
     if (editingProductId) {
       await updateProduct(editingProductId, {
         name: formName,
@@ -531,6 +555,7 @@ ON CONFLICT (id) DO NOTHING;
         image: formImage,
         description: formDesc,
         ...(computedSizes ? { sizes: computedSizes } : {}),
+        ...(computedPackagingImages ? { packagingImages: computedPackagingImages } : {}),
       });
     } else {
       await addProduct({
@@ -544,6 +569,7 @@ ON CONFLICT (id) DO NOTHING;
         image: formImage,
         description: formDesc,
         ...(computedSizes ? { sizes: computedSizes } : {}),
+        ...(computedPackagingImages ? { packagingImages: computedPackagingImages } : {}),
       });
     }
     setIsEditingProduct(false);
@@ -1105,7 +1131,8 @@ ON CONFLICT (id) DO NOTHING;
 
                       {/* PENGATURAN HARGA 8 KEMASAN (KHUSUS COOKIES & LIDAH KUCING) */}
                       {(formCategory === 'cookies' || formCategory === 'lidah-kucing') && (
-                        <div className="p-3.5 bg-[#FAF5EE] rounded-2xl border border-[#E8DACB] space-y-2.5">
+                        <>
+                          <div className="p-3.5 bg-[#FAF5EE] rounded-2xl border border-[#E8DACB] space-y-2.5">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5 text-[#4A2810]">
                               <Package className="w-4 h-4 text-[#8B5E3C]" />
@@ -1264,7 +1291,70 @@ ON CONFLICT (id) DO NOTHING;
                             </div>
                           </div>
                         </div>
-                      )}
+
+                        {/* FOTO 4 BENTUK KEMASAN KHUSUS PRODUK INI */}
+                        <div className="p-3.5 bg-[#FAF5EE] rounded-2xl border border-[#E8DACB] space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-[#4A2810]">
+                              <Layers className="w-4 h-4 text-[#8B5E3C]" />
+                              <span className="text-xs font-bold">Foto Bentuk Kemasan ({formName || 'Produk Ini'})</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-[#8B5E3C] bg-white px-2 py-0.5 rounded-full border border-[#E8DACB]">
+                              Khusus Produk
+                            </span>
+                          </div>
+                          <p className="text-[10.5px] text-[#8C7A6B] leading-relaxed">
+                            Foto kemasan ini tersimpan khusus untuk <b>{formName || 'produk ini'}</b> agar tidak tertukar dengan cookies lain.
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {/* 1. Minipack */}
+                            <div className="p-2 bg-white rounded-xl border border-[#E8DACB] space-y-1">
+                              <span className="text-[10.5px] font-bold text-[#3D2314] block">1. Minipack 150 gr</span>
+                              <input
+                                type="text"
+                                value={formPkgMinipack}
+                                onChange={(e) => setFormPkgMinipack(e.target.value)}
+                                placeholder="URL foto Minipack..."
+                                className="w-full px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                              />
+                            </div>
+                            {/* 2. Ekopack */}
+                            <div className="p-2 bg-white rounded-xl border border-[#E8DACB] space-y-1">
+                              <span className="text-[10.5px] font-bold text-[#3D2314] block">2. Ekopack 200 gr</span>
+                              <input
+                                type="text"
+                                value={formPkgEkopack}
+                                onChange={(e) => setFormPkgEkopack(e.target.value)}
+                                placeholder="URL foto Ekopack..."
+                                className="w-full px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                              />
+                            </div>
+                            {/* 3. Toples Mika */}
+                            <div className="p-2 bg-white rounded-xl border border-[#E8DACB] space-y-1">
+                              <span className="text-[10.5px] font-bold text-[#3D2314] block">3. Toples Mika Ulir</span>
+                              <input
+                                type="text"
+                                value={formPkgMika}
+                                onChange={(e) => setFormPkgMika(e.target.value)}
+                                placeholder="URL foto Toples Mika..."
+                                className="w-full px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                              />
+                            </div>
+                            {/* 4. Toples Kaca */}
+                            <div className="p-2 bg-white rounded-xl border border-[#E8DACB] space-y-1">
+                              <span className="text-[10.5px] font-bold text-[#3D2314] block">4. Toples Kaca Mewah</span>
+                              <input
+                                type="text"
+                                value={formPkgKaca}
+                                onChange={(e) => setFormPkgKaca(e.target.value)}
+                                placeholder="URL foto Toples Kaca..."
+                                className="w-full px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                       <div className="flex gap-2 pt-2">
                         <button

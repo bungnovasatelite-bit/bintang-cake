@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { Product } from '../types';
 import { INITIAL_PRODUCTS } from '../data/mockData';
 import {
@@ -166,6 +166,45 @@ interface CMSContextType {
 
 const CMSContext = createContext<CMSContextType | undefined>(undefined);
 
+// Helper migrasi: Jika storeConfig.packagingImages berisi foto custom (misal Sagu Keju yang diunggah sebelumnya),
+// amankan foto tersebut khusus ke produk Sagu Keju (jika belum punya), dan netralkan storeConfig.packagingImages
+// agar produk cookies lain (seperti Peanut Cookies) TIDAK ikut tertular/terkunci foto Sagu Keju.
+function autoMigratePackagingImages(
+  productsList: Product[],
+  config: StoreConfig
+): { products: Product[]; storeConfig: StoreConfig } {
+  const cfgPkg = config.packagingImages;
+  if (!cfgPkg) return { products: productsList, storeConfig: config };
+
+  const isCustomMinipack = Boolean(cfgPkg.minipack && !cfgPkg.minipack.includes('unsplash.com'));
+  const isCustomEkopack = Boolean(cfgPkg.ekopack && !cfgPkg.ekopack.includes('unsplash.com'));
+  const isCustomMika = Boolean(cfgPkg.mika && !cfgPkg.mika.includes('unsplash.com'));
+  const isCustomKaca = Boolean(cfgPkg.kaca && !cfgPkg.kaca.includes('unsplash.com'));
+
+  if (isCustomMinipack || isCustomEkopack || isCustomMika || isCustomKaca) {
+    const saguIndex = productsList.findIndex((p) => p.name.toLowerCase().includes('sagu keju'));
+    let updatedProducts = [...productsList];
+    if (saguIndex !== -1 && !updatedProducts[saguIndex].packagingImages) {
+      updatedProducts[saguIndex] = {
+        ...updatedProducts[saguIndex],
+        packagingImages: {
+          minipack: isCustomMinipack ? cfgPkg.minipack : undefined,
+          ekopack: isCustomEkopack ? cfgPkg.ekopack : undefined,
+          mika: isCustomMika ? cfgPkg.mika : undefined,
+          kaca: isCustomKaca ? cfgPkg.kaca : undefined,
+        },
+      };
+    }
+    const cleanConfig: StoreConfig = {
+      ...config,
+      packagingImages: { ...DEFAULT_STORE_CONFIG.packagingImages },
+    };
+    return { products: updatedProducts, storeConfig: cleanConfig };
+  }
+
+  return { products: productsList, storeConfig: config };
+}
+
 export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
     return localStorage.getItem('bintang_cms_admin') === 'true';
@@ -188,15 +227,17 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Pesanan Pelanggan
   const [orders, setOrders] = useState<OrderRecord[]>([]);
 
-  const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => {
-    const saved = localStorage.getItem('bintang_store_config');
-    if (saved) {
+  // Inisialisasi awal produk & konfigurasi toko dengan auto-migrasi kemasan per-produk
+  const initialData = useMemo(() => {
+    let rawConfig: StoreConfig = DEFAULT_STORE_CONFIG;
+    const savedConfig = localStorage.getItem('bintang_store_config');
+    if (savedConfig) {
       try {
-        const parsed = JSON.parse(saved);
+        const parsed = JSON.parse(savedConfig);
         if (parsed.packagingImages?.ekopack?.includes('photo-1607344645866-009c320c5ab8')) {
           parsed.packagingImages.ekopack = DEFAULT_STORE_CONFIG.packagingImages?.ekopack;
         }
-        return {
+        rawConfig = {
           ...DEFAULT_STORE_CONFIG,
           ...parsed,
           packagingImages: {
@@ -208,20 +249,22 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.error(e);
       }
     }
-    return DEFAULT_STORE_CONFIG;
-  });
 
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('bintang_products');
-    if (saved) {
+    let rawProducts: Product[] = INITIAL_PRODUCTS;
+    const savedProducts = localStorage.getItem('bintang_products');
+    if (savedProducts) {
       try {
-        return JSON.parse(saved);
+        rawProducts = JSON.parse(savedProducts);
       } catch (e) {
         console.error(e);
       }
     }
-    return INITIAL_PRODUCTS;
-  });
+
+    return autoMigratePackagingImages(rawProducts, rawConfig);
+  }, []);
+
+  const [storeConfig, setStoreConfig] = useState<StoreConfig>(initialData.storeConfig);
+  const [products, setProducts] = useState<Product[]>(initialData.products);
 
   // Muat pesanan saat CMS dibuka atau saat login
   const refreshOrders = async () => {
@@ -246,11 +289,13 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const cloudData = await fetchCloudStoreData();
         if (cloudData && cloudData.products && cloudData.products.length > 0) {
           if (isMounted) {
-            setProducts(cloudData.products);
-            setStoreConfig((prev) => ({ ...prev, ...cloudData.storeConfig }));
+            const rawConfig = { ...DEFAULT_STORE_CONFIG, ...cloudData.storeConfig };
+            const migrated = autoMigratePackagingImages(cloudData.products, rawConfig);
+            setProducts(migrated.products);
+            setStoreConfig(migrated.storeConfig);
             try {
-              localStorage.setItem('bintang_products', JSON.stringify(cloudData.products));
-              localStorage.setItem('bintang_store_config', JSON.stringify({ ...DEFAULT_STORE_CONFIG, ...cloudData.storeConfig }));
+              localStorage.setItem('bintang_products', JSON.stringify(migrated.products));
+              localStorage.setItem('bintang_store_config', JSON.stringify(migrated.storeConfig));
             } catch (e) {
               console.warn(e);
             }
@@ -291,6 +336,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               image: item.image_url,
               description: item.description,
               sizes: item.sizes,
+              packagingImages: item.packaging_images || undefined,
             }));
             setProducts(mapped);
           }
@@ -432,6 +478,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           image_url: newProduct.image,
           description: newProduct.description,
           sizes: newProduct.sizes,
+          packaging_images: newProduct.packagingImages,
         });
       } catch (e) {
         console.warn('Supabase products info:', e);
@@ -475,6 +522,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (updatedFields.image !== undefined) updatePayload.image_url = updatedFields.image;
         if (updatedFields.description !== undefined) updatePayload.description = updatedFields.description;
         if (updatedFields.sizes !== undefined) updatePayload.sizes = updatedFields.sizes;
+        if (updatedFields.packagingImages !== undefined) updatePayload.packaging_images = updatedFields.packagingImages;
 
         await supabase.from('products').update(updatePayload).eq('id', id);
       } catch (e) {

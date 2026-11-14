@@ -17,7 +17,6 @@ import {
   X,
   Calculator,
   Loader2,
-  Image as ImageIcon,
   Lock,
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
@@ -36,7 +35,6 @@ export const DetailProdukModal: React.FC = () => {
   const { addToCart } = useCart();
   const {
     products,
-    storeConfig,
     updateStoreConfig,
     updateProduct,
     isAdminLoggedIn,
@@ -52,17 +50,29 @@ export const DetailProdukModal: React.FC = () => {
   // Cek apakah produk masuk kategori cookies atau lidah-kucing
   const isCookieOrLidah = liveProduct.category === 'cookies' || liveProduct.category === 'lidah-kucing';
 
-  // 4 Gaya Kemasan Utama berfoto dinamis dari storeConfig
-  const packagingShowcase = useMemo(() => {
-    return getPackagingStylesShowcase(storeConfig.packagingImages);
-  }, [storeConfig.packagingImages]);
+  // 4 Gaya Kemasan Utama berfoto dinamis KHUSUS untuk produk ini (liveProduct)
+  // Prioritas:
+  // 1. liveProduct.packagingImages (foto kemasan khusus produk ini yang diupload admin)
+  // 2. DEFAULT_PACKAGING_IMAGES (foto standar netral bawaan agar TIDAK tertukar dengan cookies lain)
+  const effectivePackagingImages = useMemo(() => {
+    return {
+      minipack: liveProduct.packagingImages?.minipack || DEFAULT_PACKAGING_IMAGES.minipack,
+      ekopack: liveProduct.packagingImages?.ekopack || DEFAULT_PACKAGING_IMAGES.ekopack,
+      mika: liveProduct.packagingImages?.mika || DEFAULT_PACKAGING_IMAGES.mika,
+      kaca: liveProduct.packagingImages?.kaca || DEFAULT_PACKAGING_IMAGES.kaca,
+    };
+  }, [liveProduct.packagingImages]);
 
-  // 8 Pilihan kemasan untuk cookies & lidah kucing (harga & foto dinamis)
+  const packagingShowcase = useMemo(() => {
+    return getPackagingStylesShowcase(effectivePackagingImages, liveProduct.image);
+  }, [effectivePackagingImages, liveProduct.image]);
+
+  // 8 Pilihan kemasan untuk cookies & lidah kucing (harga & foto dinamis khusus produk ini)
   const cookieOptions = useMemo(() => {
     return isCookieOrLidah
-      ? getCookiePackageOptions(liveProduct.price, liveProduct.sizes, storeConfig.packagingImages)
+      ? getCookiePackageOptions(liveProduct.price, liveProduct.sizes, effectivePackagingImages, liveProduct.image)
       : [];
-  }, [isCookieOrLidah, liveProduct.price, liveProduct.sizes, storeConfig.packagingImages]);
+  }, [isCookieOrLidah, liveProduct.price, liveProduct.sizes, effectivePackagingImages, liveProduct.image]);
 
   // Default kemasan cookies: Toples Mika Ulir 200 gr (index 2 / 'mika-200')
   const [selectedPackageId, setSelectedPackageId] = useState<string>('mika-200');
@@ -81,12 +91,13 @@ export const DetailProdukModal: React.FC = () => {
   const [bakerNote, setBakerNote] = useState('');
   const [isLiked, setIsLiked] = useState(false);
 
-  // Modal State 1: Upload Foto Bentuk Kemasan
+  // Modal State 1: Upload Foto Bentuk Kemasan KHUSUS PRODUK INI
   const [isEditingPackagingModalOpen, setIsEditingPackagingModalOpen] = useState(false);
-  const [imgMinipack, setImgMinipack] = useState(storeConfig.packagingImages?.minipack || '');
-  const [imgEkopack, setImgEkopack] = useState(storeConfig.packagingImages?.ekopack || '');
-  const [imgMika, setImgMika] = useState(storeConfig.packagingImages?.mika || '');
-  const [imgKaca, setImgKaca] = useState(storeConfig.packagingImages?.kaca || '');
+  const [applyToAllProducts, setApplyToAllProducts] = useState(false);
+  const [imgMinipack, setImgMinipack] = useState(liveProduct.packagingImages?.minipack || '');
+  const [imgEkopack, setImgEkopack] = useState(liveProduct.packagingImages?.ekopack || '');
+  const [imgMika, setImgMika] = useState(liveProduct.packagingImages?.mika || '');
+  const [imgKaca, setImgKaca] = useState(liveProduct.packagingImages?.kaca || '');
   const [isCompressingImg, setIsCompressingImg] = useState(false);
 
   // Modal State 2: Edit Harga 8 Kemasan
@@ -107,11 +118,11 @@ export const DetailProdukModal: React.FC = () => {
   const [pendingAction, setPendingAction] = useState<'edit_images' | 'edit_prices' | null>(null);
 
   useEffect(() => {
-    setImgMinipack(storeConfig.packagingImages?.minipack || '');
-    setImgEkopack(storeConfig.packagingImages?.ekopack || '');
-    setImgMika(storeConfig.packagingImages?.mika || '');
-    setImgKaca(storeConfig.packagingImages?.kaca || '');
-  }, [storeConfig.packagingImages]);
+    setImgMinipack(liveProduct.packagingImages?.minipack || '');
+    setImgEkopack(liveProduct.packagingImages?.ekopack || '');
+    setImgMika(liveProduct.packagingImages?.mika || '');
+    setImgKaca(liveProduct.packagingImages?.kaca || '');
+  }, [liveProduct.id, liveProduct.packagingImages]);
 
   // Helper kalkulasi standar harga kemasan
   const calculateStandardPackagePrices = (base: number) => {
@@ -141,10 +152,11 @@ export const DetailProdukModal: React.FC = () => {
   };
 
   const openPackagingImagesEditor = () => {
-    setImgMinipack(storeConfig.packagingImages?.minipack || '');
-    setImgEkopack(storeConfig.packagingImages?.ekopack || '');
-    setImgMika(storeConfig.packagingImages?.mika || '');
-    setImgKaca(storeConfig.packagingImages?.kaca || '');
+    setImgMinipack(liveProduct.packagingImages?.minipack || '');
+    setImgEkopack(liveProduct.packagingImages?.ekopack || '');
+    setImgMika(liveProduct.packagingImages?.mika || '');
+    setImgKaca(liveProduct.packagingImages?.kaca || '');
+    setApplyToAllProducts(false);
 
     if (!isAdminLoggedIn) {
       setPendingAction('edit_images');
@@ -224,14 +236,30 @@ export const DetailProdukModal: React.FC = () => {
 
   const handleSavePackagingImages = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateStoreConfig({
-      packagingImages: {
-        minipack: imgMinipack,
-        ekopack: imgEkopack,
-        mika: imgMika,
-        kaca: imgKaca,
-      },
+    const pkgImgs = {
+      minipack: imgMinipack.trim() || undefined,
+      ekopack: imgEkopack.trim() || undefined,
+      mika: imgMika.trim() || undefined,
+      kaca: imgKaca.trim() || undefined,
+    };
+
+    // 1. Simpan KHUSUS untuk produk kue ini (tidak akan mempengaruhi kue cookies lainnya)
+    await updateProduct(liveProduct.id, {
+      packagingImages: pkgImgs,
     });
+
+    // 2. Jika admin secara eksplisit mencentang opsi untuk menjadikannya template default toko
+    if (applyToAllProducts) {
+      await updateStoreConfig({
+        packagingImages: {
+          minipack: imgMinipack,
+          ekopack: imgEkopack,
+          mika: imgMika,
+          kaca: imgKaca,
+        },
+      });
+    }
+
     setIsEditingPackagingModalOpen(false);
   };
 
@@ -812,33 +840,46 @@ export const DetailProdukModal: React.FC = () => {
           </div>
         )}
 
-        {/* ================= MODAL 2: UPLOAD FOTO BENTUK KEMASAN ================= */}
+        {/* ================= MODAL 2: UPLOAD FOTO BENTUK KEMASAN KHUSUS PRODUK INI ================= */}
         {isEditingPackagingModalOpen && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-fade-in">
             <div className="w-full max-w-lg max-h-[90vh] bg-[#FAF5EE] rounded-3xl border border-[#E8DACB] p-5 shadow-2xl flex flex-col overflow-hidden">
               <div className="flex justify-between items-center pb-2.5 border-b border-[#E8DACB] shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-[#4A2810] text-white flex items-center justify-center">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-[#4A2810] text-white flex items-center justify-center shrink-0">
                     <Layers className="w-4 h-4" />
                   </div>
-                  <div>
-                    <h3 className="font-serif font-bold text-sm text-[#3D2314]">
-                      Upload Foto Bentuk Kemasan
-                    </h3>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h3 className="font-serif font-bold text-sm text-[#3D2314] truncate">
+                        Upload Foto Kemasan
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-[#EAD1B6] text-[#4A2810] truncate max-w-[150px]">
+                        {liveProduct.name}
+                      </span>
+                    </div>
                     <p className="text-[10px] text-[#8C7A6B]">
-                      Ganti gambar 4 model wadah kue cookies &amp; lidah kucing
+                      Tersimpan khusus untuk katalog kue <strong>{liveProduct.name}</strong>
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsEditingPackagingModalOpen(false)}
-                  className="p-1.5 rounded-full text-[#8C7A6B] hover:text-[#3D2314] cursor-pointer"
+                  className="p-1.5 rounded-full text-[#8C7A6B] hover:text-[#3D2314] cursor-pointer shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               <form onSubmit={handleSavePackagingImages} className="flex-1 overflow-y-auto space-y-3 py-3 no-scrollbar">
+                {/* Petunjuk Spesifik Produk */}
+                <div className="p-3 bg-amber-50/90 rounded-2xl border border-amber-200/90 flex items-start gap-2.5">
+                  <span className="text-base leading-none">💡</span>
+                  <p className="text-[10.5px] text-[#5C3D2E] leading-relaxed">
+                    Foto kemasan di bawah ini <strong>hanya tersimpan khusus untuk kue {liveProduct.name}</strong>. Anda dapat mengunggah foto berbeda untuk masing-masing jenis cookies tanpa saling tertukar atau mempengaruhi jenis cookies lainnya.
+                  </p>
+                </div>
+
                 {/* 1. Minipack Pouch */}
                 <div className="p-3 bg-white rounded-2xl border border-[#E8DACB] space-y-2">
                   <div className="flex items-center justify-between">
@@ -860,28 +901,51 @@ export const DetailProdukModal: React.FC = () => {
                           }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#8C7A6B]">
-                          <ImageIcon className="w-6 h-6" />
-                        </div>
+                        <img
+                          src={liveProduct.image || DEFAULT_PACKAGING_IMAGES.minipack}
+                          alt="Minipack Fallback"
+                          className="w-full h-full object-cover opacity-60"
+                        />
                       )}
                     </div>
                     <div className="flex-1 space-y-1.5">
-                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
-                        {isCompressingImg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                        <span>Pilih Foto dari Perangkat</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleUploadPkgImage('minipack', e)}
-                          className="hidden"
-                          disabled={isCompressingImg}
-                        />
-                      </label>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <label className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
+                          {isCompressingImg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                          <span>Upload Foto</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleUploadPkgImage('minipack', e)}
+                            className="hidden"
+                            disabled={isCompressingImg}
+                          />
+                        </label>
+                        {liveProduct.image && (
+                          <button
+                            type="button"
+                            onClick={() => setImgMinipack(liveProduct.image)}
+                            className="px-2.5 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-[10.5px] font-semibold text-[#8B5E3C] hover:bg-[#FAF5EE] cursor-pointer"
+                            title="Gunakan foto produk saat ini"
+                          >
+                            Foto Utama
+                          </button>
+                        )}
+                        {imgMinipack && (
+                          <button
+                            type="button"
+                            onClick={() => setImgMinipack('')}
+                            className="px-2 py-1 rounded-xl text-[10px] text-red-500 hover:bg-red-50 cursor-pointer"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
                       <input
                         type="text"
                         value={imgMinipack}
                         onChange={(e) => setImgMinipack(e.target.value)}
-                        placeholder="Atau tempel URL gambar..."
+                        placeholder="Atau tempel URL gambar Minipack..."
                         className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
                       />
                     </div>
@@ -909,28 +973,51 @@ export const DetailProdukModal: React.FC = () => {
                           }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#8C7A6B]">
-                          <ImageIcon className="w-6 h-6" />
-                        </div>
+                        <img
+                          src={liveProduct.image || DEFAULT_PACKAGING_IMAGES.ekopack}
+                          alt="Ekopack Fallback"
+                          className="w-full h-full object-cover opacity-60"
+                        />
                       )}
                     </div>
                     <div className="flex-1 space-y-1.5">
-                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
-                        {isCompressingImg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                        <span>Pilih Foto dari Perangkat</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleUploadPkgImage('ekopack', e)}
-                          className="hidden"
-                          disabled={isCompressingImg}
-                        />
-                      </label>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <label className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
+                          {isCompressingImg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                          <span>Upload Foto</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleUploadPkgImage('ekopack', e)}
+                            className="hidden"
+                            disabled={isCompressingImg}
+                          />
+                        </label>
+                        {liveProduct.image && (
+                          <button
+                            type="button"
+                            onClick={() => setImgEkopack(liveProduct.image)}
+                            className="px-2.5 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-[10.5px] font-semibold text-[#8B5E3C] hover:bg-[#FAF5EE] cursor-pointer"
+                            title="Gunakan foto produk saat ini"
+                          >
+                            Foto Utama
+                          </button>
+                        )}
+                        {imgEkopack && (
+                          <button
+                            type="button"
+                            onClick={() => setImgEkopack('')}
+                            className="px-2 py-1 rounded-xl text-[10px] text-red-500 hover:bg-red-50 cursor-pointer"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
                       <input
                         type="text"
                         value={imgEkopack}
                         onChange={(e) => setImgEkopack(e.target.value)}
-                        placeholder="Atau tempel URL gambar..."
+                        placeholder="Atau tempel URL gambar Ekopack..."
                         className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
                       />
                     </div>
@@ -958,28 +1045,51 @@ export const DetailProdukModal: React.FC = () => {
                           }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#8C7A6B]">
-                          <ImageIcon className="w-6 h-6" />
-                        </div>
+                        <img
+                          src={liveProduct.image || DEFAULT_PACKAGING_IMAGES.mika}
+                          alt="Toples Mika Fallback"
+                          className="w-full h-full object-cover opacity-60"
+                        />
                       )}
                     </div>
                     <div className="flex-1 space-y-1.5">
-                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
-                        {isCompressingImg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                        <span>Pilih Foto dari Perangkat</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleUploadPkgImage('mika', e)}
-                          className="hidden"
-                          disabled={isCompressingImg}
-                        />
-                      </label>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <label className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
+                          {isCompressingImg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                          <span>Upload Foto</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleUploadPkgImage('mika', e)}
+                            className="hidden"
+                            disabled={isCompressingImg}
+                          />
+                        </label>
+                        {liveProduct.image && (
+                          <button
+                            type="button"
+                            onClick={() => setImgMika(liveProduct.image)}
+                            className="px-2.5 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-[10.5px] font-semibold text-[#8B5E3C] hover:bg-[#FAF5EE] cursor-pointer"
+                            title="Gunakan foto produk saat ini"
+                          >
+                            Foto Utama
+                          </button>
+                        )}
+                        {imgMika && (
+                          <button
+                            type="button"
+                            onClick={() => setImgMika('')}
+                            className="px-2 py-1 rounded-xl text-[10px] text-red-500 hover:bg-red-50 cursor-pointer"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
                       <input
                         type="text"
                         value={imgMika}
                         onChange={(e) => setImgMika(e.target.value)}
-                        placeholder="Atau tempel URL gambar..."
+                        placeholder="Atau tempel URL gambar Toples Mika..."
                         className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
                       />
                     </div>
@@ -1007,48 +1117,92 @@ export const DetailProdukModal: React.FC = () => {
                           }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#8C7A6B]">
-                          <ImageIcon className="w-6 h-6" />
-                        </div>
+                        <img
+                          src={liveProduct.image || DEFAULT_PACKAGING_IMAGES.kaca}
+                          alt="Toples Kaca Fallback"
+                          className="w-full h-full object-cover opacity-60"
+                        />
                       )}
                     </div>
                     <div className="flex-1 space-y-1.5">
-                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
-                        {isCompressingImg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                        <span>Pilih Foto dari Perangkat</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleUploadPkgImage('kaca', e)}
-                          className="hidden"
-                          disabled={isCompressingImg}
-                        />
-                      </label>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <label className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
+                          {isCompressingImg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                          <span>Upload Foto</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleUploadPkgImage('kaca', e)}
+                            className="hidden"
+                            disabled={isCompressingImg}
+                          />
+                        </label>
+                        {liveProduct.image && (
+                          <button
+                            type="button"
+                            onClick={() => setImgKaca(liveProduct.image)}
+                            className="px-2.5 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-[10.5px] font-semibold text-[#8B5E3C] hover:bg-[#FAF5EE] cursor-pointer"
+                            title="Gunakan foto produk saat ini"
+                          >
+                            Foto Utama
+                          </button>
+                        )}
+                        {imgKaca && (
+                          <button
+                            type="button"
+                            onClick={() => setImgKaca('')}
+                            className="px-2 py-1 rounded-xl text-[10px] text-red-500 hover:bg-red-50 cursor-pointer"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
                       <input
                         type="text"
                         value={imgKaca}
                         onChange={(e) => setImgKaca(e.target.value)}
-                        placeholder="Atau tempel URL gambar..."
+                        placeholder="Atau tempel URL gambar Toples Kaca..."
                         className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
                       />
                     </div>
                   </div>
                 </div>
 
+                {/* Opsi Terapkan ke Seluruh Toko */}
+                <label className="flex items-start gap-2.5 p-3 bg-white rounded-2xl border border-[#E8DACB] cursor-pointer hover:bg-[#FAF5EE] transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={applyToAllProducts}
+                    onChange={(e) => setApplyToAllProducts(e.target.checked)}
+                    className="mt-0.5 rounded text-[#4A2810] focus:ring-[#4A2810] cursor-pointer"
+                  />
+                  <div className="text-[10.5px] text-[#5C3D2E]">
+                    <span className="font-bold block">Terapkan juga sebagai foto bawaan toko</span>
+                    <span className="text-[9.5px] text-[#8C7A6B]">Centang jika Anda ingin foto kemasan ini dijadikan template bawaan bagi jenis cookies lain yang belum memiliki foto kemasan khusus.</span>
+                  </div>
+                </label>
+
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setIsEditingPackagingModalOpen(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-white border border-[#E8DACB] text-xs font-bold text-[#7A6657] cursor-pointer"
+                    className="flex-1 py-2.5 rounded-xl bg-white border border-[#E8DACB] text-xs font-bold text-[#7A6657] cursor-pointer hover:bg-gray-50"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
-                    disabled={isSyncing}
-                    className="flex-1 py-2.5 rounded-xl bg-[#4A2810] text-white text-xs font-bold shadow-md hover:bg-[#341A08] cursor-pointer"
+                    disabled={isSyncing || isCompressingImg}
+                    className="flex-1 py-2.5 rounded-xl bg-[#4A2810] text-white text-xs font-bold shadow-md hover:bg-[#341A08] cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    {isSyncing ? 'Menyimpan...' : 'Simpan Foto Kemasan'}
+                    {isSyncing ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Menyimpan...</span>
+                      </>
+                    ) : (
+                      <span>Simpan Foto ({liveProduct.name})</span>
+                    )}
                   </button>
                 </div>
               </form>
