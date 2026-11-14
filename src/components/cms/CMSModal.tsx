@@ -31,7 +31,9 @@ import {
   Coins,
   MessageSquareQuote,
   Star,
-  Flame
+  Flame,
+  Package,
+  Calculator
 } from 'lucide-react';
 import { useCMS } from '../../context/CMSContext';
 import { Product, ProductCategory } from '../../types';
@@ -75,9 +77,9 @@ export const CMSModal: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  // CMS Tabs: products | orders | promo | typography | boutique | banners | payments | reviews | config
+  // CMS Tabs: products | orders | packaging | promo | typography | boutique | banners | payments | reviews | config
   const [activeTab, setActiveTab] = useState<
-    'products' | 'orders' | 'promo' | 'typography' | 'boutique' | 'banners' | 'payments' | 'reviews' | 'config'
+    'products' | 'orders' | 'packaging' | 'promo' | 'typography' | 'boutique' | 'banners' | 'payments' | 'reviews' | 'config'
   >('products');
 
   // Filter Kategori di CMS (Cake, Cookies, Brownies, Hampers, Lidah Kucing, Custom)
@@ -97,6 +99,22 @@ export const CMSModal: React.FC = () => {
   const [formBadge, setFormBadge] = useState<string>('BEST SELLER');
   const [formImage, setFormImage] = useState<string>('');
   const [formDesc, setFormDesc] = useState<string>('');
+
+  // Harga Khusus 8 Pilihan Kemasan (Cookies & Lidah Kucing)
+  const [pkgPriceMinipack150, setPkgPriceMinipack150] = useState<number>(39000);
+  const [pkgPriceEkopack200, setPkgPriceEkopack200] = useState<number>(47000);
+  const [pkgPriceMika200, setPkgPriceMika200] = useState<number>(50000);
+  const [pkgPriceMika250, setPkgPriceMika250] = useState<number>(61000);
+  const [pkgPriceMika350, setPkgPriceMika350] = useState<number>(84000);
+  const [pkgPriceMika500, setPkgPriceMika500] = useState<number>(117000);
+  const [pkgPriceMika1000, setPkgPriceMika1000] = useState<number>(217000);
+  const [pkgPriceKaca150, setPkgPriceKaca150] = useState<number>(53000);
+
+  // Pengaturan Foto Bentuk Kemasan
+  const [packagingMinipack, setPackagingMinipack] = useState(storeConfig.packagingImages?.minipack || '');
+  const [packagingEkopack, setPackagingEkopack] = useState(storeConfig.packagingImages?.ekopack || '');
+  const [packagingMika, setPackagingMika] = useState(storeConfig.packagingImages?.mika || '');
+  const [packagingKaca, setPackagingKaca] = useState(storeConfig.packagingImages?.kaca || '');
 
   // Orders filter state
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'processing' | 'completed'>('all');
@@ -260,6 +278,10 @@ ON CONFLICT (id) DO NOTHING;
       setQrisCode(storeConfig.qrisCode || '');
       setBankName(storeConfig.bankName || '');
       setBankAccount(storeConfig.bankAccount || '');
+      setPackagingMinipack(storeConfig.packagingImages?.minipack || '');
+      setPackagingEkopack(storeConfig.packagingImages?.ekopack || '');
+      setPackagingMika(storeConfig.packagingImages?.mika || '');
+      setPackagingKaca(storeConfig.packagingImages?.kaca || '');
       setInputUrl(supabaseUrl);
       setInputKey(supabaseAnonKey);
 
@@ -286,8 +308,35 @@ ON CONFLICT (id) DO NOTHING;
     }
   };
 
+  const calculateStandardPackagePrices = (base: number) => {
+    const round1000 = (val: number) => Math.round(val / 1000) * 1000;
+    return {
+      minipack150: round1000(base * 0.78),
+      ekopack200: round1000(base * 0.93),
+      mika200: base,
+      mika250: round1000(base * 1.22),
+      mika350: round1000(base * 1.67),
+      mika500: round1000(base * 2.33),
+      mika1000: round1000(base * 4.33),
+      kaca150: round1000(base * 1.05),
+    };
+  };
+
+  const applyAutoPackagePrices = (basePrice: number) => {
+    const std = calculateStandardPackagePrices(basePrice);
+    setPkgPriceMinipack150(std.minipack150);
+    setPkgPriceEkopack200(std.ekopack200);
+    setPkgPriceMika200(std.mika200);
+    setPkgPriceMika250(std.mika250);
+    setPkgPriceMika350(std.mika350);
+    setPkgPriceMika500(std.mika500);
+    setPkgPriceMika1000(std.mika1000);
+    setPkgPriceKaca150(std.kaca150);
+  };
+
   const openNewProductForm = (preselectedCategory?: ProductCategory) => {
     const cat = preselectedCategory || (cmsCategoryFilter !== 'all' ? (cmsCategoryFilter as ProductCategory) : 'cookies');
+    const defaultPrice = cat === 'cake' ? 150000 : cat === 'hampers' ? 250000 : 50000;
     setEditingProductId(null);
     setFormName('');
     setFormCategory(cat);
@@ -300,12 +349,13 @@ ON CONFLICT (id) DO NOTHING;
         ? 'BOX SEKAT PREMIUM'
         : cat.toUpperCase()
     );
-    setFormPrice(cat === 'cake' ? 150000 : cat === 'hampers' ? 250000 : 55000);
+    setFormPrice(defaultPrice);
     setFormRating(5.0);
     setFormReviews('50+');
     setFormBadge('NEW ARRIVAL');
     setFormImage('https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=600&q=80');
     setFormDesc('Kue lezat buatan tangan dengan bahan mentega Wijsman kualitas terbaik.');
+    applyAutoPackagePrices(defaultPrice);
     setIsEditingProduct(true);
   };
 
@@ -320,6 +370,22 @@ ON CONFLICT (id) DO NOTHING;
     setFormBadge(p.badge || 'NONE');
     setFormImage(p.image);
     setFormDesc(p.description || '');
+
+    const std = calculateStandardPackagePrices(p.price);
+    const findSizePrice = (name: string, fallback: number) => {
+      if (!p.sizes || p.sizes.length === 0) return fallback;
+      const found = p.sizes.find((s) => s.name.toLowerCase().trim() === name.toLowerCase().trim());
+      return found && found.price > 0 ? found.price : fallback;
+    };
+    setPkgPriceMinipack150(findSizePrice('Minipack 150 gr', std.minipack150));
+    setPkgPriceEkopack200(findSizePrice('Ekopack 200 gr', std.ekopack200));
+    setPkgPriceMika200(findSizePrice('Toples Mika Ulir 200 gr', std.mika200));
+    setPkgPriceMika250(findSizePrice('Toples Mika Ulir 250 gr', std.mika250));
+    setPkgPriceMika350(findSizePrice('Toples Mika Ulir 350 gr', std.mika350));
+    setPkgPriceMika500(findSizePrice('Toples Mika Ulir 500 gr', std.mika500));
+    setPkgPriceMika1000(findSizePrice('Toples Mika Ulir 1000 gr', std.mika1000));
+    setPkgPriceKaca150(findSizePrice('Toples Kaca 150 gr', std.kaca150));
+
     setIsEditingProduct(true);
   };
 
@@ -390,11 +456,68 @@ ON CONFLICT (id) DO NOTHING;
     }
   };
 
+  // Upload Foto Pilihan Kemasan
+  const handlePackagingImageUpload = async (
+    key: 'minipack' | 'ekopack' | 'mika' | 'kaca',
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        setIsCompressingImg(true);
+        const compressed = await compressImage(file, 600, 600, 0.8);
+        if (key === 'minipack') setPackagingMinipack(compressed);
+        if (key === 'ekopack') setPackagingEkopack(compressed);
+        if (key === 'mika') setPackagingMika(compressed);
+        if (key === 'kaca') setPackagingKaca(compressed);
+
+        await updateStoreConfig({
+          packagingImages: {
+            minipack: key === 'minipack' ? compressed : packagingMinipack,
+            ekopack: key === 'ekopack' ? compressed : packagingEkopack,
+            mika: key === 'mika' ? compressed : packagingMika,
+            kaca: key === 'kaca' ? compressed : packagingKaca,
+          },
+        });
+      } catch (err) {
+        console.error('Gagal upload gambar kemasan:', err);
+      } finally {
+        setIsCompressingImg(false);
+      }
+    }
+  };
+
+  const handleSavePackaging = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await updateStoreConfig({
+      packagingImages: {
+        minipack: packagingMinipack,
+        ekopack: packagingEkopack,
+        mika: packagingMika,
+        kaca: packagingKaca,
+      },
+    });
+  };
+
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) return;
 
     const badgeVal = formBadge === 'NONE' ? undefined : (formBadge as any);
+
+    const isCookieOrLidah = formCategory === 'cookies' || formCategory === 'lidah-kucing';
+    const computedSizes = isCookieOrLidah
+      ? [
+          { name: 'Minipack 150 gr', portion: '150 gr • Camilan praktis', price: Number(pkgPriceMinipack150) || 0 },
+          { name: 'Ekopack 200 gr', portion: '200 gr • Standing pouch eco', price: Number(pkgPriceEkopack200) || 0 },
+          { name: 'Toples Mika Ulir 200 gr', portion: '200 gr • Toples mika ulir kedap udara', price: Number(pkgPriceMika200) || 0 },
+          { name: 'Toples Mika Ulir 250 gr', portion: '250 gr • Toples mika ulir sedang', price: Number(pkgPriceMika250) || 0 },
+          { name: 'Toples Mika Ulir 350 gr', portion: '350 gr • Toples mika ulir besar', price: Number(pkgPriceMika350) || 0 },
+          { name: 'Toples Mika Ulir 500 gr', portion: '500 gr • Toples mika ulir setengah kilo', price: Number(pkgPriceMika500) || 0 },
+          { name: 'Toples Mika Ulir 1000 gr', portion: '1000 gr • Toples mika ulir jumbo 1 kg', price: Number(pkgPriceMika1000) || 0 },
+          { name: 'Toples Kaca 150 gr', portion: '150 gr • Jar toples kaca mewah', price: Number(pkgPriceKaca150) || 0 },
+        ]
+      : undefined;
 
     if (editingProductId) {
       await updateProduct(editingProductId, {
@@ -407,6 +530,7 @@ ON CONFLICT (id) DO NOTHING;
         badge: badgeVal,
         image: formImage,
         description: formDesc,
+        ...(computedSizes ? { sizes: computedSizes } : {}),
       });
     } else {
       await addProduct({
@@ -419,6 +543,7 @@ ON CONFLICT (id) DO NOTHING;
         badge: badgeVal,
         image: formImage,
         description: formDesc,
+        ...(computedSizes ? { sizes: computedSizes } : {}),
       });
     }
     setIsEditingProduct(false);
@@ -667,6 +792,21 @@ ON CONFLICT (id) DO NOTHING;
               >
                 <ClipboardList className="w-3.5 h-3.5" />
                 Pesanan ({orders.length})
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveTab('packaging');
+                  setIsEditingProduct(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold border-b-2 whitespace-nowrap transition-all cursor-pointer ${
+                  activeTab === 'packaging'
+                    ? 'border-[#4A2810] text-[#4A2810]'
+                    : 'border-transparent text-[#8C7A6B] hover:text-[#3D2314]'
+                }`}
+              >
+                <Package className="w-3.5 h-3.5" />
+                Kemasan &amp; Wadah
               </button>
 
               <button
@@ -962,6 +1102,169 @@ ON CONFLICT (id) DO NOTHING;
                           className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#3D2314] focus:outline-none resize-none"
                         />
                       </div>
+
+                      {/* PENGATURAN HARGA 8 KEMASAN (KHUSUS COOKIES & LIDAH KUCING) */}
+                      {(formCategory === 'cookies' || formCategory === 'lidah-kucing') && (
+                        <div className="p-3.5 bg-[#FAF5EE] rounded-2xl border border-[#E8DACB] space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-[#4A2810]">
+                              <Package className="w-4 h-4 text-[#8B5E3C]" />
+                              <span className="text-xs font-bold">Harga 8 Pilihan Kemasan</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => applyAutoPackagePrices(formPrice)}
+                              className="px-2.5 py-1 rounded-xl bg-white border border-[#E8DACB] hover:bg-[#F3E8DA] text-[10.5px] font-bold text-[#4A2810] flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                              title="Hitung ulang otomatis berdasarkan harga satuan"
+                            >
+                              <Calculator className="w-3.5 h-3.5 text-[#8B5E3C]" />
+                              <span>Hitung Otomatis</span>
+                            </button>
+                          </div>
+
+                          <p className="text-[10.5px] text-[#8C7A6B] leading-relaxed">
+                            Tentukan harga untuk masing-masing wadah kemasan, atau klik <b>Hitung Otomatis</b> agar dihitung proporsional dari Harga Satuan Rp {formPrice.toLocaleString('id-ID')}.
+                          </p>
+
+                          <div className="space-y-1.5 pt-1">
+                            {/* 1. Minipack 150 gr */}
+                            <div className="p-2 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-bold text-[#3D2314] leading-tight">1. Minipack 150 gr</p>
+                                <p className="text-[9.5px] text-[#8C7A6B]">Pouch zipper mini camilan hemat</p>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[10px] font-bold text-[#8C7A6B]">Rp</span>
+                                <input
+                                  type="number"
+                                  value={pkgPriceMinipack150}
+                                  onChange={(e) => setPkgPriceMinipack150(Number(e.target.value))}
+                                  className="w-24 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] text-right focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 2. Ekopack 200 gr */}
+                            <div className="p-2 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-bold text-[#3D2314] leading-tight">2. Ekopack 200 gr</p>
+                                <p className="text-[9.5px] text-[#8C7A6B]">Standing pouch eco ziplock</p>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[10px] font-bold text-[#8C7A6B]">Rp</span>
+                                <input
+                                  type="number"
+                                  value={pkgPriceEkopack200}
+                                  onChange={(e) => setPkgPriceEkopack200(Number(e.target.value))}
+                                  className="w-24 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] text-right focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 3. Toples Mika Ulir 200 gr */}
+                            <div className="p-2 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-bold text-[#3D2314] leading-tight">3. Toples Mika Ulir 200 gr</p>
+                                <p className="text-[9.5px] text-[#8C7A6B]">Toples kristal ulir (Standar favorit)</p>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[10px] font-bold text-[#8C7A6B]">Rp</span>
+                                <input
+                                  type="number"
+                                  value={pkgPriceMika200}
+                                  onChange={(e) => setPkgPriceMika200(Number(e.target.value))}
+                                  className="w-24 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] text-right focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 4. Toples Mika Ulir 250 gr */}
+                            <div className="p-2 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-bold text-[#3D2314] leading-tight">4. Toples Mika Ulir 250 gr</p>
+                                <p className="text-[9.5px] text-[#8C7A6B]">Toples mika ulir sedang</p>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[10px] font-bold text-[#8C7A6B]">Rp</span>
+                                <input
+                                  type="number"
+                                  value={pkgPriceMika250}
+                                  onChange={(e) => setPkgPriceMika250(Number(e.target.value))}
+                                  className="w-24 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] text-right focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 5. Toples Mika Ulir 350 gr */}
+                            <div className="p-2 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-bold text-[#3D2314] leading-tight">5. Toples Mika Ulir 350 gr</p>
+                                <p className="text-[9.5px] text-[#8C7A6B]">Toples mika ulir besar meja tamu</p>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[10px] font-bold text-[#8C7A6B]">Rp</span>
+                                <input
+                                  type="number"
+                                  value={pkgPriceMika350}
+                                  onChange={(e) => setPkgPriceMika350(Number(e.target.value))}
+                                  className="w-24 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] text-right focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 6. Toples Mika Ulir 500 gr */}
+                            <div className="p-2 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-bold text-[#3D2314] leading-tight">6. Toples Mika Ulir 500 gr</p>
+                                <p className="text-[9.5px] text-[#8C7A6B]">Toples mika ulir setengah kilo</p>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[10px] font-bold text-[#8C7A6B]">Rp</span>
+                                <input
+                                  type="number"
+                                  value={pkgPriceMika500}
+                                  onChange={(e) => setPkgPriceMika500(Number(e.target.value))}
+                                  className="w-24 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] text-right focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 7. Toples Mika Ulir 1000 gr */}
+                            <div className="p-2 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-bold text-[#3D2314] leading-tight">7. Toples Mika Ulir 1000 gr</p>
+                                <p className="text-[9.5px] text-[#8C7A6B]">Toples mika ulir jumbo 1 kg</p>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[10px] font-bold text-[#8C7A6B]">Rp</span>
+                                <input
+                                  type="number"
+                                  value={pkgPriceMika1000}
+                                  onChange={(e) => setPkgPriceMika1000(Number(e.target.value))}
+                                  className="w-24 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] text-right focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            {/* 8. Toples Kaca 150 gr */}
+                            <div className="p-2 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-[11px] font-bold text-[#3D2314] leading-tight">8. Toples Kaca Mewah 150 gr</p>
+                                <p className="text-[9.5px] text-[#8C7A6B]">Jar kaca kedap udara elegan untuk kado/hampers</p>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[10px] font-bold text-[#8C7A6B]">Rp</span>
+                                <input
+                                  type="number"
+                                  value={pkgPriceKaca150}
+                                  onChange={(e) => setPkgPriceKaca150(Number(e.target.value))}
+                                  className="w-24 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] text-right focus:outline-none"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="flex gap-2 pt-2">
                         <button
@@ -1282,6 +1585,239 @@ ON CONFLICT (id) DO NOTHING;
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* ===================== TAB: KEMASAN & WADAH ===================== */}
+              {activeTab === 'packaging' && (
+                <form onSubmit={handleSavePackaging} className="space-y-4">
+                  <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-[#FAF5EE] text-[#4A2810] flex items-center justify-center">
+                        <Package className="w-4 h-4 text-[#8B5E3C]" />
+                      </div>
+                      <div>
+                        <h4 className="font-serif font-bold text-xs text-[#3D2314]">
+                          Foto Bentuk Pilihan Kemasan &amp; Wadah
+                        </h4>
+                        <p className="text-[10px] text-[#8C7A6B]">
+                          Unggah foto untuk masing-masing wadah kue Cookies &amp; Lidah Kucing
+                        </p>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-[#6B5749] leading-relaxed bg-[#FAF5EE] p-2.5 rounded-2xl border border-[#E8DACB]">
+                      Foto kemasan ini akan otomatis tampil di jendela <b>Pilihan Bentuk Kemasan</b> pada halaman detail produk, sehingga calon pembeli bisa melihat jelas bentuk toples atau pouch sebelum membeli.
+                    </p>
+
+                    {/* 4 Kemasan Cards */}
+                    <div className="space-y-3 pt-1">
+                      {/* 1. Minipack Pouch */}
+                      <div className="p-3 bg-[#FAF5EE] rounded-2xl border border-[#E8DACB] space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-[#3D2314]">1. Minipack Pouch (150 gr)</p>
+                            <p className="text-[10px] text-[#8C7A6B]">Pouch zipper mini praktis camilan hemat</p>
+                          </div>
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#EAD1B6] text-[#4A2810]">
+                            Pouch Zipper
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="w-16 h-16 rounded-xl overflow-hidden bg-white border border-[#E8DACB] shrink-0">
+                            {packagingMinipack ? (
+                              <img src={packagingMinipack} alt="Minipack" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[#8C7A6B]">
+                                <ImageIcon className="w-6 h-6" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 space-y-1.5">
+                            <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-xs font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
+                              {isCompressingImg ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Upload className="w-3.5 h-3.5" />
+                              )}
+                              <span>Pilih Foto dari Perangkat</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handlePackagingImageUpload('minipack', e)}
+                                className="hidden"
+                                disabled={isCompressingImg}
+                              />
+                            </label>
+                            <input
+                              type="text"
+                              value={packagingMinipack}
+                              onChange={(e) => setPackagingMinipack(e.target.value)}
+                              placeholder="Atau tempel URL foto Minipack..."
+                              className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 2. Ekopack Pouch */}
+                      <div className="p-3 bg-[#FAF5EE] rounded-2xl border border-[#E8DACB] space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-[#3D2314]">2. Ekopack Pouch (200 gr)</p>
+                            <p className="text-[10px] text-[#8C7A6B]">Standing pouch ramah kantong jendela transparan</p>
+                          </div>
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#EAD1B6] text-[#4A2810]">
+                            Standing Pouch
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="w-16 h-16 rounded-xl overflow-hidden bg-white border border-[#E8DACB] shrink-0">
+                            {packagingEkopack ? (
+                              <img src={packagingEkopack} alt="Ekopack" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[#8C7A6B]">
+                                <ImageIcon className="w-6 h-6" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 space-y-1.5">
+                            <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-xs font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
+                              {isCompressingImg ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Upload className="w-3.5 h-3.5" />
+                              )}
+                              <span>Pilih Foto dari Perangkat</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handlePackagingImageUpload('ekopack', e)}
+                                className="hidden"
+                                disabled={isCompressingImg}
+                              />
+                            </label>
+                            <input
+                              type="text"
+                              value={packagingEkopack}
+                              onChange={(e) => setPackagingEkopack(e.target.value)}
+                              placeholder="Atau tempel URL foto Ekopack..."
+                              className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 3. Toples Mika Ulir */}
+                      <div className="p-3 bg-[#FAF5EE] rounded-2xl border border-[#E8DACB] space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-[#3D2314]">3. Toples Mika Ulir (200g - 1000g)</p>
+                            <p className="text-[10px] text-[#8C7A6B]">Toples kristal mika ulir kedap udara (Best Seller Bintang Cake)</p>
+                          </div>
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#EAD1B6] text-[#4A2810]">
+                            Toples Mika
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="w-16 h-16 rounded-xl overflow-hidden bg-white border border-[#E8DACB] shrink-0">
+                            {packagingMika ? (
+                              <img src={packagingMika} alt="Toples Mika Ulir" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[#8C7A6B]">
+                                <ImageIcon className="w-6 h-6" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 space-y-1.5">
+                            <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-xs font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
+                              {isCompressingImg ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Upload className="w-3.5 h-3.5" />
+                              )}
+                              <span>Pilih Foto dari Perangkat</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handlePackagingImageUpload('mika', e)}
+                                className="hidden"
+                                disabled={isCompressingImg}
+                              />
+                            </label>
+                            <input
+                              type="text"
+                              value={packagingMika}
+                              onChange={(e) => setPackagingMika(e.target.value)}
+                              placeholder="Atau tempel URL foto Toples Mika..."
+                              className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 4. Toples Kaca Mewah */}
+                      <div className="p-3 bg-[#FAF5EE] rounded-2xl border border-[#E8DACB] space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-[#3D2314]">4. Toples Kaca Mewah (150 gr)</p>
+                            <p className="text-[10px] text-[#8C7A6B]">Jar kaca eksklusif kedap udara untuk kado, bingkisan &amp; hampers</p>
+                          </div>
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#EAD1B6] text-[#4A2810]">
+                            Toples Kaca
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="w-16 h-16 rounded-xl overflow-hidden bg-white border border-[#E8DACB] shrink-0">
+                            {packagingKaca ? (
+                              <img src={packagingKaca} alt="Toples Kaca Mewah" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[#8C7A6B]">
+                                <ImageIcon className="w-6 h-6" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 space-y-1.5">
+                            <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-xs font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
+                              {isCompressingImg ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Upload className="w-3.5 h-3.5" />
+                              )}
+                              <span>Pilih Foto dari Perangkat</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handlePackagingImageUpload('kaca', e)}
+                                className="hidden"
+                                disabled={isCompressingImg}
+                              />
+                            </label>
+                            <input
+                              type="text"
+                              value={packagingKaca}
+                              onChange={(e) => setPackagingKaca(e.target.value)}
+                              placeholder="Atau tempel URL foto Toples Kaca..."
+                              className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSyncing}
+                    className="w-full py-3 rounded-2xl bg-[#4A2810] text-white font-bold text-xs shadow-md hover:bg-[#341A08] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>{isSyncing ? 'Menyimpan...' : 'Simpan Foto Pilihan Kemasan'}</span>
+                  </button>
+                </form>
               )}
 
               {/* ===================== TAB 3: PROMO & FLASH SALE ===================== */}

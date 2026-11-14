@@ -55,6 +55,13 @@ export interface StoreConfig {
   fontSizeScale: 'normal' | 'large' | 'xlarge';
   // Ulasan Pelanggan
   customerReviews: CustomerReview[];
+  // Pengaturan Gambar Kemasan Wadah (Cookies & Lidah Kucing)
+  packagingImages?: {
+    minipack?: string;
+    ekopack?: string;
+    mika?: string;
+    kaca?: string;
+  };
   // Pengaturan Pembayaran (QRIS & Transfer Bank)
   qrisImage?: string;
   qrisCode?: string;
@@ -106,6 +113,13 @@ export const DEFAULT_STORE_CONFIG: StoreConfig = {
       date: '08 Nov 2026'
     }
   ],
+  // Pengaturan Gambar Kemasan Default
+  packagingImages: {
+    minipack: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=400&q=80',
+    ekopack: 'https://images.unsplash.com/photo-1607344645866-009c320c5ab8?auto=format&fit=crop&w=400&q=80',
+    mika: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80',
+    kaca: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80',
+  },
   // Pengaturan Pembayaran
   qrisImage: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=400&q=80',
   qrisCode: 'NMID: ID1020304050607 - Bintang Cake',

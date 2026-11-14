@@ -15,25 +15,34 @@ import {
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
 import { useCart } from '../context/CartContext';
+import { useCMS } from '../context/CMSContext';
 import { BrandLogo } from '../components/icons/BrandLogo';
 import {
-  PACKAGING_STYLES_SHOWCASE,
+  getPackagingStylesShowcase,
   getCookiePackageOptions
 } from '../data/packageOptions';
 
 export const DetailProdukModal: React.FC = () => {
   const { selectedProduct, closeProductDetail } = useNavigation();
   const { addToCart } = useCart();
+  const { storeConfig } = useCMS();
 
   if (!selectedProduct) return null;
 
   // Cek apakah produk masuk kategori cookies atau lidah-kucing
   const isCookieOrLidah = selectedProduct.category === 'cookies' || selectedProduct.category === 'lidah-kucing';
 
-  // 8 Pilihan kemasan untuk cookies & lidah kucing
+  // 4 Gaya Kemasan Utama berfoto dinamis dari storeConfig
+  const packagingShowcase = useMemo(() => {
+    return getPackagingStylesShowcase(storeConfig.packagingImages);
+  }, [storeConfig.packagingImages]);
+
+  // 8 Pilihan kemasan untuk cookies & lidah kucing (harga & foto dinamis)
   const cookieOptions = useMemo(() => {
-    return isCookieOrLidah ? getCookiePackageOptions(selectedProduct.price) : [];
-  }, [isCookieOrLidah, selectedProduct.price]);
+    return isCookieOrLidah
+      ? getCookiePackageOptions(selectedProduct.price, selectedProduct.sizes, storeConfig.packagingImages)
+      : [];
+  }, [isCookieOrLidah, selectedProduct.price, selectedProduct.sizes, storeConfig.packagingImages]);
 
   // Default kemasan cookies: Toples Mika Ulir 200 gr (index 2 / 'mika-200')
   const [selectedPackageId, setSelectedPackageId] = useState<string>('mika-200');
@@ -188,7 +197,7 @@ export const DetailProdukModal: React.FC = () => {
 
                 {/* Horizontal Scroll Kartu Gaya Kemasan */}
                 <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
-                  {PACKAGING_STYLES_SHOWCASE.map((style) => {
+                  {packagingShowcase.map((style) => {
                     const isStyleActive = selectedCookiePackage.styleId === style.id;
                     return (
                       <div
