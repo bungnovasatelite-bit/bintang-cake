@@ -46,6 +46,7 @@ export const KeranjangPage: React.FC = () => {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccessMsg, setOrderSuccessMsg] = useState<{ id: string; msg: string } | null>(null);
+  const [lastOrderedItems, setLastOrderedItems] = useState<typeof items>([]);
   const [isCopied, setIsCopied] = useState(false);
 
   const grandTotal = subtotal;
@@ -125,6 +126,8 @@ export const KeranjangPage: React.FC = () => {
         })),
       });
 
+      setLastOrderedItems([...items]);
+
       if (res.success) {
         setOrderSuccessMsg({
           id: res.orderId || 'BC-000',
@@ -153,8 +156,19 @@ export const KeranjangPage: React.FC = () => {
 
   // Jika pesanan telah berhasil
   if (orderSuccessMsg) {
+    const itemsList = lastOrderedItems.length > 0
+      ? lastOrderedItems.map(it => `• ${it.quantity}x ${it.name} [${it.selectedSize || it.packageType}] - ${formatIDR(it.price * it.quantity)}`).join('\n')
+      : 'Pesanan Aneka Kue Bintang Cake';
+
     const waText = encodeURIComponent(
-      `Halo Bintang Cake, saya sudah memesan atas nama *${customerName}* (WA: ${customerPhone}) dengan No Pesanan *#${orderSuccessMsg.id}*.\nJadwal: ${scheduleTime || 'Segera'}\nTotal: ${formatIDR(grandTotal)}\nMohon konfirmasinya ya!`
+      `Halo Bintang Cake, saya sudah membuat pesanan dengan No Pesanan *#${orderSuccessMsg.id}*.\n\n` +
+      `*Nama Pemesan:* ${customerName}\n` +
+      `*No. WhatsApp:* ${customerPhone}\n` +
+      `*Jadwal:* ${scheduleTime || 'Pengiriman Standar'}\n` +
+      `*Metode:* ${paymentMethod === 'qris' ? 'QRIS Instant' : 'Transfer Bank'}\n\n` +
+      `*Rincian Kemasan & Produk:*\n${itemsList}\n\n` +
+      `*Total Tagihan:* ${formatIDR(grandTotal)}\n\n` +
+      `Mohon segera diproses dan dikonfirmasi, terima kasih!`
     );
 
     return (
@@ -300,8 +314,8 @@ export const KeranjangPage: React.FC = () => {
                   <h4 className="font-serif font-bold text-sm text-[#3D2314] truncate">
                     {item.name}
                   </h4>
-                  <p className="text-[10px] text-[#8C7A6B] line-clamp-1 mt-0.5">
-                    {item.selectedSize ? `${item.selectedSize} • ` : ''}{item.packageType}
+                  <p className="text-[10px] text-[#8C7A6B] line-clamp-1 mt-0.5 font-medium">
+                    {item.selectedSize || item.packageType || 'Kemasan Standar'}
                   </p>
                 </div>
 

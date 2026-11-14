@@ -3,7 +3,7 @@ import { CartItem, Product } from '../types';
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product, quantity?: number, selectedSize?: string, note?: string) => void;
+  addToCart: (product: Product, quantity?: number, selectedSize?: string, note?: string, priceOverride?: number) => void;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, delta: number) => void;
   clearCart: () => void;
@@ -15,28 +15,8 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-// Initial items matching the screenshot
-const INITIAL_CART: CartItem[] = [
-  {
-    id: 'cart-item-1',
-    productId: 'prod-semprit',
-    name: 'Semprit',
-    packageType: 'Toples Mika Ulir 200 gr',
-    price: 100000,
-    quantity: 2,
-    image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80',
-  },
-  {
-    id: 'cart-item-2',
-    productId: 'prod-8',
-    name: 'Kue Ulang Tahun',
-    packageType: 'Kue Ultah bertabur parutan keju diameter 20 cm',
-    price: 150000,
-    quantity: 1,
-    image: 'https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=400&q=80',
-    selectedSize: 'Diameter 20 cm',
-  }
-];
+// Keranjang awal kosong agar pembeli memilih kuenya sendiri
+const INITIAL_CART: CartItem[] = [];
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>(() => {
@@ -57,17 +37,31 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('bintang_cart', JSON.stringify(items));
   }, [items]);
 
-  const addToCart = (product: Product, quantity: number = 1, selectedSize?: string, note?: string) => {
+  const addToCart = (
+    product: Product,
+    quantity: number = 1,
+    selectedSize?: string,
+    note?: string,
+    priceOverride?: number
+  ) => {
     setItems((prevItems) => {
       const existingIndex = prevItems.findIndex(
         (item) => item.productId === product.id && item.selectedSize === selectedSize
       );
+
+      const effectivePrice = priceOverride !== undefined 
+        ? priceOverride 
+        : (selectedSize && product.sizes 
+            ? (product.sizes.find(s => s.name === selectedSize)?.price || product.price)
+            : product.price);
 
       if (existingIndex > -1) {
         const next = [...prevItems];
         next[existingIndex] = {
           ...next[existingIndex],
           quantity: next[existingIndex].quantity + quantity,
+          price: effectivePrice,
+          packageType: selectedSize || next[existingIndex].packageType,
           note: note || next[existingIndex].note
         };
         return next;
@@ -77,10 +71,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
         productId: product.id,
         name: product.name,
-        packageType: product.packageType || 'Kemasan Standar',
-        price: selectedSize && product.sizes 
-          ? (product.sizes.find(s => s.name === selectedSize)?.price || product.price)
-          : product.price,
+        packageType: selectedSize || product.packageType || 'Kemasan Standar',
+        price: effectivePrice,
         quantity,
         image: product.image,
         selectedSize,

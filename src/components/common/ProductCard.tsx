@@ -36,7 +36,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const handlePlusClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    addToCart(product, 1);
+    if (product.category === 'cookies' || product.category === 'lidah-kucing' || (product.sizes && product.sizes.length > 0)) {
+      openProductDetail(product);
+    } else {
+      addToCart(product, 1);
+    }
   };
 
   const handleEditClick = (e: React.MouseEvent) => {
