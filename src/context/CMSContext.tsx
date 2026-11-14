@@ -192,7 +192,18 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const saved = localStorage.getItem('bintang_store_config');
     if (saved) {
       try {
-        return { ...DEFAULT_STORE_CONFIG, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        if (parsed.packagingImages?.ekopack?.includes('photo-1607344645866-009c320c5ab8')) {
+          parsed.packagingImages.ekopack = DEFAULT_STORE_CONFIG.packagingImages?.ekopack;
+        }
+        return {
+          ...DEFAULT_STORE_CONFIG,
+          ...parsed,
+          packagingImages: {
+            ...DEFAULT_STORE_CONFIG.packagingImages,
+            ...(parsed.packagingImages || {}),
+          },
+        };
       } catch (e) {
         console.error(e);
       }
