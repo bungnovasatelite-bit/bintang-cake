@@ -33,7 +33,9 @@ import {
   Star,
   Flame,
   Package,
-  Calculator
+  Calculator,
+  Truck,
+  Calendar
 } from 'lucide-react';
 import { useCMS } from '../../context/CMSContext';
 import { Product, ProductCategory } from '../../types';
@@ -62,6 +64,7 @@ export const CMSModal: React.FC = () => {
     orders,
     refreshOrders,
     updateOrderStatus,
+    updateOrderSchedule,
     deleteOrder,
     supabaseUrl,
     supabaseAnonKey,
@@ -145,10 +148,10 @@ export const CMSModal: React.FC = () => {
   const [fontStyle, setFontStyle] = useState<'normal' | 'italic'>(storeConfig.fontStyle || 'normal');
   const [fontSizeScale, setFontSizeScale] = useState<'normal' | 'large' | 'xlarge'>(storeConfig.fontSizeScale || 'normal');
 
-  // Info Butik & Profil state
+  // Info Toko & Profil state
   const [boutiqueTitle, setBoutiqueTitle] = useState(storeConfig.boutiqueTitle || 'Bintang Cake & Cookies');
   const [boutiqueSubtitle, setBoutiqueSubtitle] = useState(storeConfig.boutiqueSubtitle || 'Artisan Cake, Brownies & Wijsman Butter Cookies');
-  const [boutiqueStatus, setBoutiqueStatus] = useState(storeConfig.boutiqueStatus || 'Butik Buka • Melayani Pesanan');
+  const [boutiqueStatus, setBoutiqueStatus] = useState(storeConfig.boutiqueStatus ? storeConfig.boutiqueStatus.replace(/butik/gi, 'Toko') : 'Toko Buka • Melayani Pesanan');
   const [boutiqueHours, setBoutiqueHours] = useState(storeConfig.boutiqueHours || '09:00 - 20:00 WITA');
   const [boutiqueHoursWeekend, setBoutiqueHoursWeekend] = useState(storeConfig.boutiqueHoursWeekend || '10:00 - 18:00 WITA');
   const [boutiqueAddress, setBoutiqueAddress] = useState(storeConfig.boutiqueAddress || 'Jl. Cikini Raya No. 42, Menteng, Jakarta Pusat');
@@ -275,7 +278,7 @@ ON CONFLICT (id) DO NOTHING;
       setFontSizeScale(storeConfig.fontSizeScale || 'normal');
       setBoutiqueTitle(storeConfig.boutiqueTitle || 'Bintang Cake & Cookies');
       setBoutiqueSubtitle(storeConfig.boutiqueSubtitle || 'Artisan Cake, Brownies & Wijsman Butter Cookies');
-      setBoutiqueStatus(storeConfig.boutiqueStatus || 'Butik Buka • Melayani Pesanan');
+      setBoutiqueStatus(storeConfig.boutiqueStatus ? storeConfig.boutiqueStatus.replace(/butik/gi, 'Toko') : 'Toko Buka • Melayani Pesanan');
       setBoutiqueHours(storeConfig.boutiqueHours || '09:00 - 20:00 WITA');
       setBoutiqueHoursWeekend(storeConfig.boutiqueHoursWeekend || '10:00 - 18:00 WITA');
       setBoutiqueAddress(storeConfig.boutiqueAddress || 'Jl. Cikini Raya No. 42, Menteng, Jakarta Pusat');
@@ -877,7 +880,7 @@ ON CONFLICT (id) DO NOTHING;
                 }`}
               >
                 <Store className="w-3.5 h-3.5" />
-                Info Butik
+                Info Toko
               </button>
 
               <button
@@ -1617,18 +1620,81 @@ ON CONFLICT (id) DO NOTHING;
                             <div className="flex items-center justify-between text-xs">
                               <div>
                                 <p className="font-bold text-[#3D2314]">{ord.customerName}</p>
-                                <p className="text-[10.5px] text-[#7A6657]">{ord.customerPhone}</p>
+                                <p className="text-[10.5px] text-[#7A6657] font-mono">{ord.customerPhone}</p>
                               </div>
 
                               <a
-                                href={`https://wa.me/${(ord.customerPhone || '').replace(/[^0-9]/g, '')}`}
+                                href={`https://wa.me/${(ord.customerPhone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                                  `Halo Kak ${ord.customerName}, kami dari Admin Bintang Cake & Cookies ingin mengonfirmasi pesanan kue #${ord.id}.\n\n` +
+                                  `Jadwal ${ord.deliveryMode === 'pickup' ? 'Pengambilan di Toko' : 'Pengantaran'}: *${ord.scheduleTime || 'akan segera kami jadwalkan'}*.\n` +
+                                  (ord.deliveryAddress ? `Alamat: ${ord.deliveryAddress}\n` : '') +
+                                  `Total: Rp ${ord.totalAmount.toLocaleString('id-ID')}.\n\n` +
+                                  `Apakah jadwal dan rincian ini sudah sesuai? Terima kasih!`
+                                )}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="px-2.5 py-1 rounded-xl bg-[#E3EFE3] text-[#2C6E49] text-[10.5px] font-bold flex items-center gap-1 hover:bg-[#d2e7d2]"
+                                className="px-2.5 py-1 rounded-xl bg-[#E3EFE3] text-[#2C6E49] text-[10.5px] font-bold flex items-center gap-1 hover:bg-[#d2e7d2] cursor-pointer"
+                                title="Kirim konfirmasi jadwal & pesanan via WhatsApp"
                               >
                                 <Phone className="w-3 h-3" />
                                 Chat WA
                               </a>
+                            </div>
+
+                            {/* Delivery Mode & Delivery Address */}
+                            <div className="p-2 rounded-xl bg-[#FAF5EE] text-[10.5px] text-[#5C4534] space-y-0.5">
+                              <div className="flex items-center gap-1.5 font-bold text-[#4A2810]">
+                                {ord.deliveryMode === 'pickup' ? (
+                                  <>
+                                    <Store className="w-3.5 h-3.5 text-[#8B5E3C]" />
+                                    <span>Ambil Sendiri ke Toko</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Truck className="w-3.5 h-3.5 text-[#8B5E3C]" />
+                                    <span>Kurir Pengantaran</span>
+                                  </>
+                                )}
+                              </div>
+                              {ord.deliveryAddress && (
+                                <p className="text-[10px] text-[#7A6657] pl-5">
+                                  {ord.deliveryAddress}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* PENGATURAN JADWAL OLEH ADMIN (Sepenuhnya Ditentukan Admin) */}
+                            <div className="p-2.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-[#8C7A6B] flex items-center gap-1">
+                                  <Calendar className="w-3 h-3 text-[#8B5E3C]" />
+                                  Jadwal Pengambilan / Pengantaran (Admin):
+                                </span>
+                                <span className={`text-[9.5px] font-bold px-2 py-0.2 rounded-full ${ord.scheduleTime && ord.scheduleTime !== 'Menunggu Konfirmasi Admin' ? 'bg-[#E3EFE3] text-[#2C6E49]' : 'bg-[#FFF0D4] text-[#A26510]'}`}>
+                                  {ord.scheduleTime || 'Belum Ditentukan'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  type="text"
+                                  defaultValue={ord.scheduleTime || ''}
+                                  placeholder="Tulis jadwal (misal: Sabtu, 16 Nov - Pukul 14:00 WITA)..."
+                                  id={`schedule-input-${ord.id}`}
+                                  className="flex-1 px-2.5 py-1 rounded-lg bg-white border border-[#E8DACB] text-[11px] text-[#3D2314] focus:outline-none"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const input = document.getElementById(`schedule-input-${ord.id}`) as HTMLInputElement;
+                                    if (input && input.value.trim()) {
+                                      updateOrderSchedule(ord.id, input.value.trim());
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-[#4A2810] text-[#FAF5EE] text-[10.5px] font-bold hover:bg-[#341A08] cursor-pointer whitespace-nowrap shadow-xs"
+                                >
+                                  Simpan Jadwal
+                                </button>
+                              </div>
                             </div>
 
                             {/* Items list */}
@@ -2147,7 +2213,7 @@ ON CONFLICT (id) DO NOTHING;
                 </form>
               )}
 
-              {/* ===================== TAB 5: INFO BUTIK & PROFIL ===================== */}
+              {/* ===================== TAB 5: INFO TOKO & PROFIL ===================== */}
               {activeTab === 'boutique' && (
                 <form onSubmit={handleSaveBoutique} className="space-y-4">
                   <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-3">
@@ -2157,17 +2223,17 @@ ON CONFLICT (id) DO NOTHING;
                       </div>
                       <div>
                         <h4 className="font-serif font-bold text-xs text-[#3D2314]">
-                          Informasi Butik &amp; Profil Toko
+                          Informasi Toko &amp; Profil
                         </h4>
                         <p className="text-[10px] text-[#8C7A6B]">
-                          Atur nama butik, status, jam operasional, dan kontak resmi
+                          Atur nama toko, status, jam operasional, dan kontak resmi
                         </p>
                       </div>
                     </div>
 
                     <div>
                       <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Nama / Judul Butik
+                        Nama / Judul Toko
                       </label>
                       <input
                         type="text"
@@ -2193,13 +2259,13 @@ ON CONFLICT (id) DO NOTHING;
 
                     <div>
                       <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Status Butik (Tampil dengan Titik Hijau)
+                        Status Toko (Tampil dengan Titik Hijau)
                       </label>
                       <input
                         type="text"
                         value={boutiqueStatus}
                         onChange={(e) => setBoutiqueStatus(e.target.value)}
-                        placeholder="Contoh: Butik Buka • Melayani Pesanan"
+                        placeholder="Contoh: Toko Buka • Melayani Pesanan"
                         className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-semibold text-[#3D2314] focus:outline-none"
                       />
                     </div>
@@ -2234,7 +2300,7 @@ ON CONFLICT (id) DO NOTHING;
 
                     <div>
                       <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Alamat Butik &amp; Lokasi Dapur
+                        Alamat Toko &amp; Lokasi Dapur
                       </label>
                       <textarea
                         rows={2}
@@ -2264,7 +2330,7 @@ ON CONFLICT (id) DO NOTHING;
                     className="w-full py-3 rounded-2xl bg-[#4A2810] text-white font-bold text-xs shadow-md hover:bg-[#341A08] transition-all cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <Check className="w-4 h-4" />
-                    <span>Simpan Informasi Butik &amp; Profil</span>
+                    <span>Simpan Informasi Toko &amp; Profil</span>
                   </button>
                 </form>
               )}

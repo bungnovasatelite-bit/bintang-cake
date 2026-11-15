@@ -275,6 +275,30 @@ export async function updateOrderStatusInDb(orderId: string, status: OrderRecord
 }
 
 /**
+ * Update tanggal / waktu jadwal pesanan (Sepenuhnya diatur oleh Admin CMS)
+ */
+export async function updateOrderScheduleInDb(orderId: string, scheduleTime: string): Promise<void> {
+  try {
+    const existingStr = localStorage.getItem('bintang_orders');
+    if (existingStr) {
+      const list: OrderRecord[] = JSON.parse(existingStr);
+      const updated = list.map(o => o.id === orderId ? { ...o, scheduleTime } : o);
+      localStorage.setItem('bintang_orders', JSON.stringify(updated));
+    }
+  } catch (e) {
+    console.warn(e);
+  }
+
+  if (isSupabaseConfigured()) {
+    try {
+      await supabase.from('orders').update({ schedule_time: scheduleTime }).eq('id', orderId);
+    } catch (e) {
+      console.warn('Gagal update jadwal di Supabase:', e);
+    }
+  }
+}
+
+/**
  * Hapus pesanan (Khusus Admin CMS)
  */
 export async function deleteOrderFromDb(orderId: string): Promise<void> {

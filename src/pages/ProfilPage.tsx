@@ -31,7 +31,7 @@ export const ProfilPage: React.FC = () => {
 
   return (
     <div className="space-y-4 pb-8">
-      {/* 1. Header Butik Bintang Cake (Dinamis dari Pengaturan CMS) */}
+      {/* 1. Header Toko Bintang Cake (Dinamis dari Pengaturan CMS) */}
       <section className="p-5 rounded-3xl bg-gradient-to-br from-[#FFFDFB] via-[#FAF5EE] to-[#F5EFE6] border border-[#EBDCCF] shadow-sm text-center space-y-3">
         <div className="flex flex-col items-center justify-center">
           <BrandLogo size={60} className="shadow-md mb-2" />
@@ -45,7 +45,7 @@ export const ProfilPage: React.FC = () => {
 
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E3EFE3] text-[#2C6E49] border border-[#C5DEC5] text-[10.5px] font-bold">
           <span className="w-2 h-2 rounded-full bg-[#2C6E49] animate-pulse" />
-          <span>{storeConfig.boutiqueStatus || 'Butik Buka • Melayani Pesanan'}</span>
+          <span>{storeConfig.boutiqueStatus ? storeConfig.boutiqueStatus.replace(/butik/gi, 'Toko') : 'Toko Buka • Melayani Pesanan'}</span>
         </div>
       </section>
 
@@ -102,7 +102,7 @@ export const ProfilPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. Menu Informasi & Alamat Butik */}
+      {/* 4. Menu Informasi & Alamat Toko */}
       <section className="rounded-3xl bg-[#FFFDFB] border border-[#EFE5D9] shadow-sm divide-y divide-[#F5EFE6] overflow-hidden">
         <a
           href={`https://wa.me/${officialWaNumber}?text=Halo%20Bintang%20Cake,%20saya%20ingin%20tanya%20alamat%20lokasi%20pengambilan.`}
@@ -113,7 +113,7 @@ export const ProfilPage: React.FC = () => {
           <div className="flex items-center gap-3">
             <MapPin className="w-4 h-4 text-[#8C7A6B] shrink-0" />
             <div>
-              <span className="text-xs font-semibold text-[#3D2314] block">Alamat Butik &amp; Dapur</span>
+              <span className="text-xs font-semibold text-[#3D2314] block">Alamat Toko &amp; Dapur</span>
               <span className="text-[10px] text-[#8C7A6B]">{storeConfig.boutiqueAddress || 'Jl. Cikini Raya No. 42, Menteng, Jakarta Pusat'}</span>
             </div>
           </div>
@@ -189,7 +189,7 @@ export const ProfilPage: React.FC = () => {
               )}
             </div>
             <p className="text-[10.5px] text-[#CBB296]">
-              Kelola produk, banner promo, pesanan &amp; info butik
+              Kelola produk, banner promo, pesanan &amp; info toko
             </p>
           </div>
         </div>

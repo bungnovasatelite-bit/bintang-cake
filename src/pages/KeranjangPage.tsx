@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Trash2,
   Plus,
@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Store,
   Truck,
-  Calendar,
   Clock,
   QrCode,
   Building2,
@@ -17,7 +16,6 @@ import {
   Check,
   AlertCircle,
   MessageCircle,
-  CalendarDays
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useNavigation } from '../context/NavigationContext';
@@ -37,11 +35,8 @@ export const KeranjangPage: React.FC = () => {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
 
-  // Jadwal interaktif dengan tanggal & slot waktu otomatis
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [pickedDate, setPickedDate] = useState('');
-  const [pickedTimeSlot, setPickedTimeSlot] = useState('10:00 - 13:00 (Pagi)');
-  const [scheduleTime, setScheduleTime] = useState('');
+  // Alamat pengantaran khusus pengiriman kurir
+  const [deliveryAddress, setDeliveryAddress] = useState('');
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,38 +45,6 @@ export const KeranjangPage: React.FC = () => {
   const [isCopied, setIsCopied] = useState(false);
 
   const grandTotal = subtotal;
-
-  // Helper format tanggal Indonesia
-  const formatDateIndo = (dateStr: string) => {
-    if (!dateStr) return '';
-    try {
-      const d = new Date(dateStr + 'T00:00:00');
-      return d.toLocaleDateString('id-ID', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  // Set tanggal cepat (Hari Ini, Besok, Lusa)
-  const setQuickDate = (daysAhead: number) => {
-    const d = new Date();
-    d.setDate(d.getDate() + daysAhead);
-    const iso = d.toISOString().split('T')[0];
-    setPickedDate(iso);
-  };
-
-  // Sinkronkan scheduleTime saat pickedDate atau pickedTimeSlot berubah
-  useEffect(() => {
-    if (pickedDate) {
-      const formatted = `${formatDateIndo(pickedDate)} • ${pickedTimeSlot}`;
-      setScheduleTime(formatted);
-    }
-  }, [pickedDate, pickedTimeSlot]);
 
   const handleCopyAccount = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -99,11 +62,20 @@ export const KeranjangPage: React.FC = () => {
       setValidationError('Silakan masukkan Nomor WhatsApp Anda yang aktif.');
       return;
     }
+    if (deliveryMode === 'courier' && !deliveryAddress.trim()) {
+      setValidationError('Silakan masukkan Alamat Lengkap Pengantaran.');
+      return;
+    }
 
     setValidationError(null);
     setIsSubmitting(true);
 
-    const finalSchedule = scheduleTime.trim() || (deliveryMode === 'pickup' ? 'Ambil di Toko' : 'Pengiriman Standar');
+    const finalAddress = deliveryMode === 'pickup'
+      ? (storeConfig.boutiqueAddress ? `Ambil di Toko (${storeConfig.boutiqueAddress})` : 'Ambil Langsung di Toko Bintang Cake')
+      : deliveryAddress.trim();
+
+    // Jadwal sepenuhnya diisi dan ditentukan oleh Admin setelah pesanan masuk
+    const finalSchedule = 'Menunggu Konfirmasi Admin';
 
     try {
       const res = await pushOrderToSupabase({
@@ -111,7 +83,7 @@ export const KeranjangPage: React.FC = () => {
         customerPhone: customerPhone.trim(),
         deliveryMode,
         scheduleTime: finalSchedule,
-        deliveryAddress: deliveryMode === 'pickup' ? 'Ambil di Toko Bintang Cake' : 'Alamat Pengiriman Pelanggan',
+        deliveryAddress: finalAddress,
         subtotal,
         discount: 0,
         totalAmount: grandTotal,
@@ -164,11 +136,13 @@ export const KeranjangPage: React.FC = () => {
       `Halo Bintang Cake, saya sudah membuat pesanan dengan No Pesanan *#${orderSuccessMsg.id}*.\n\n` +
       `*Nama Pemesan:* ${customerName}\n` +
       `*No. WhatsApp:* ${customerPhone}\n` +
-      `*Jadwal:* ${scheduleTime || 'Pengiriman Standar'}\n` +
-      `*Metode:* ${paymentMethod === 'qris' ? 'QRIS Instant' : 'Transfer Bank'}\n\n` +
+      `*Metode:* ${deliveryMode === 'pickup' ? 'Diambil ke Toko' : 'Kurir Pengantaran'}\n` +
+      (deliveryMode === 'courier' && deliveryAddress ? `*Alamat Pengantaran:* ${deliveryAddress}\n` : '') +
+      `*Jadwal:* Menunggu Konfirmasi & Penjadwalan oleh Admin Bintang Cake\n` +
+      `*Metode Pembayaran:* ${paymentMethod === 'qris' ? 'QRIS Instant' : 'Transfer Bank'}\n\n` +
       `*Rincian Kemasan & Produk:*\n${itemsList}\n\n` +
       `*Total Tagihan:* ${formatIDR(grandTotal)}\n\n` +
-      `Mohon segera diproses dan dikonfirmasi, terima kasih!`
+      `Mohon segera diproses dan dikonfirmasi jadwalnya ya Admin. Terima kasih!`
     );
 
     return (
@@ -200,11 +174,21 @@ export const KeranjangPage: React.FC = () => {
             <span className="font-semibold text-[#3D2314]">{customerPhone}</span>
           </div>
           <div className="flex justify-between border-b border-[#F5EFE6] pb-2">
+            <span className="text-[#8C7A6B]">Metode:</span>
+            <span className="font-semibold text-[#3D2314]">{deliveryMode === 'pickup' ? 'Diambil ke Toko' : 'Kurir Pengantaran'}</span>
+          </div>
+          {deliveryMode === 'courier' && deliveryAddress && (
+            <div className="flex justify-between border-b border-[#F5EFE6] pb-2">
+              <span className="text-[#8C7A6B]">Alamat:</span>
+              <span className="font-semibold text-[#3D2314] text-right max-w-[200px] truncate">{deliveryAddress}</span>
+            </div>
+          )}
+          <div className="flex justify-between border-b border-[#F5EFE6] pb-2">
             <span className="text-[#8C7A6B]">Jadwal:</span>
-            <span className="font-semibold text-[#3D2314]">{scheduleTime || 'Pengiriman Standar'}</span>
+            <span className="font-semibold text-[#8B5E3C] text-right">Menunggu Konfirmasi Admin</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#8C7A6B]">Metode:</span>
+            <span className="text-[#8C7A6B]">Pembayaran:</span>
             <span className="font-semibold text-[#3D2314] uppercase">{paymentMethod === 'qris' ? 'QRIS Instant' : 'Transfer Bank'}</span>
           </div>
         </div>
@@ -225,8 +209,7 @@ export const KeranjangPage: React.FC = () => {
               setOrderSuccessMsg(null);
               setCustomerName('');
               setCustomerPhone('');
-              setPickedDate('');
-              setScheduleTime('');
+              setDeliveryAddress('');
               setActiveTab('produk');
             }}
             className="w-full py-3 rounded-2xl bg-[#F5EFE6] hover:bg-[#EFE5D9] text-[#4A2810] font-bold text-xs transition-colors cursor-pointer"
@@ -461,79 +444,48 @@ export const KeranjangPage: React.FC = () => {
             />
           </div>
 
-          {/* JADWAL OTOMATIS: KALENDER & PILIHAN WAKTU */}
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center justify-between">
-              <label className="block text-[11px] font-semibold text-[#6B5749]">
-                Jadwal Pengambilan / Pengantaran
+          {/* Alamat Pengantaran Jika Memilih Kurir */}
+          {deliveryMode === 'courier' ? (
+            <div>
+              <label className="block text-[11px] font-semibold text-[#6B5749] mb-1">
+                Alamat Lengkap Pengantaran <span className="text-[#A03D2A]">*</span>
               </label>
-              <span className="text-[10px] text-[#8C7A6B]">Pilih Tanggal &amp; Waktu</span>
+              <textarea
+                rows={2}
+                value={deliveryAddress}
+                onChange={(e) => {
+                  setDeliveryAddress(e.target.value);
+                  if (validationError) setValidationError(null);
+                }}
+                placeholder="Masukkan jalan, nomor rumah, RT/RW, kelurahan, dan patokan pengantaran..."
+                className="w-full px-3 py-2 rounded-xl bg-[#F8F3EC] border border-[#E8DACB] font-medium text-[#3D2314] placeholder-[#A8988B] focus:outline-none focus:border-[#4A2810] text-xs resize-none"
+              />
             </div>
-
-            {/* Tombol Pintas Tanggal Cepat */}
-            <div className="grid grid-cols-3 gap-1.5">
-              <button
-                type="button"
-                onClick={() => setQuickDate(0)}
-                className="py-1.5 px-2 rounded-xl bg-[#FAF5EE] hover:bg-[#F3E8DA] border border-[#E8DACB] text-[10.5px] font-semibold text-[#4A2810] transition-colors cursor-pointer"
-              >
-                Hari Ini
-              </button>
-              <button
-                type="button"
-                onClick={() => setQuickDate(1)}
-                className="py-1.5 px-2 rounded-xl bg-[#FAF5EE] hover:bg-[#F3E8DA] border border-[#E8DACB] text-[10.5px] font-semibold text-[#4A2810] transition-colors cursor-pointer"
-              >
-                Besok
-              </button>
-              <button
-                type="button"
-                onClick={() => setQuickDate(2)}
-                className="py-1.5 px-2 rounded-xl bg-[#FAF5EE] hover:bg-[#F3E8DA] border border-[#E8DACB] text-[10.5px] font-semibold text-[#4A2810] transition-colors cursor-pointer"
-              >
-                Lusa
-              </button>
+          ) : (
+            <div className="p-2.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] text-[#5C4534] flex items-start gap-2">
+              <Store className="w-4 h-4 text-[#8B5E3C] shrink-0 mt-0.5" />
+              <span>
+                Kue diambil langsung ke <strong>Toko Bintang Cake &amp; Cookies</strong> ({storeConfig.boutiqueAddress || 'Jl. Cikini Raya No. 42, Menteng, Jakarta Pusat'}).
+              </span>
             </div>
+          )}
 
-            {/* Input Kalender Tanggal Otomatis & Pilihan Jam */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F8F3EC] border border-[#E8DACB] text-[#3D2314]">
-                <CalendarDays className="w-4 h-4 text-[#8C7A6B] shrink-0" />
-                <input
-                  type="date"
-                  min={todayStr}
-                  value={pickedDate}
-                  onChange={(e) => setPickedDate(e.target.value)}
-                  className="w-full bg-transparent font-medium text-xs text-[#3D2314] focus:outline-none cursor-pointer"
-                />
+          {/* JADWAL PENGAMBILAN / PENGANTARAN: SEPENUHNYA DITENTUKAN OLEH ADMIN */}
+          <div className="p-3.5 rounded-2xl bg-[#FAF5EE] border border-[#E8DACB] flex items-start gap-3">
+            <Clock className="w-5 h-5 text-[#8B5E3C] shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h5 className="font-serif font-bold text-xs text-[#3D2314]">
+                  Jadwal Pengambilan / Pengantaran
+                </h5>
+                <span className="text-[9.5px] font-bold px-2 py-0.2 rounded-full bg-[#EAD1B6] text-[#4A2810]">
+                  Ditentukan oleh Admin
+                </span>
               </div>
-
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F8F3EC] border border-[#E8DACB] text-[#3D2314]">
-                <Clock className="w-4 h-4 text-[#8C7A6B] shrink-0" />
-                <select
-                  value={pickedTimeSlot}
-                  onChange={(e) => setPickedTimeSlot(e.target.value)}
-                  className="w-full bg-transparent font-medium text-xs text-[#3D2314] focus:outline-none cursor-pointer"
-                >
-                  <option value="10:00 - 13:00 (Pagi)">10:00 - 13:00 (Pagi)</option>
-                  <option value="13:00 - 16:00 (Siang)">13:00 - 16:00 (Siang)</option>
-                  <option value="16:00 - 19:00 (Sore)">16:00 - 19:00 (Sore)</option>
-                  <option value="19:00 - 20:30 (Malam)">19:00 - 20:30 (Malam)</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Preview Jadwal Terpilih */}
-            {scheduleTime ? (
-              <div className="p-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] text-[#4A2810] font-semibold flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[#2C6E49] shrink-0" />
-                <span>Jadwal Terpilih: <strong>{scheduleTime}</strong></span>
-              </div>
-            ) : (
-              <p className="text-[10px] text-[#8C7A6B] italic">
-                *Klik tombol cepat di atas atau pilih tanggal pada kalender.
+              <p className="text-[11px] text-[#6B5749] leading-relaxed">
+                Tanggal dan jam kesiapan / pengantaran kue <strong>sepenuhnya akan ditentukan &amp; dikonfirmasi oleh Admin Toko</strong> melalui WhatsApp resmi (0821-5873-9760) setelah pesanan Anda masuk.
               </p>
-            )}
+            </div>
           </div>
         </div>
       </section>

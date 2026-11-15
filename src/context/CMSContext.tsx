@@ -12,6 +12,7 @@ import {
   OrderRecord,
   fetchOrders,
   updateOrderStatusInDb,
+  updateOrderScheduleInDb,
   deleteOrderFromDb
 } from '../lib/database';
 import {
@@ -40,7 +41,7 @@ export interface StoreConfig {
   promoTitle: string;
   promoSubtitle: string;
   promoDiscount: string;
-  // Info Butik & Profil
+  // Info Toko & Profil
   boutiqueTitle: string;
   boutiqueSubtitle: string;
   boutiqueStatus: string;
@@ -81,10 +82,10 @@ export const DEFAULT_STORE_CONFIG: StoreConfig = {
   promoTitle: 'Dapatkan Souvenir Cantik',
   promoSubtitle: 'Dapatkan Souvenir Cantik setiap Pembelian sejumlah Rp 750.000',
   promoDiscount: 'Rp 5.000',
-  // Info Butik & Profil
+  // Info Toko & Profil
   boutiqueTitle: 'Bintang Cake & Cookies',
   boutiqueSubtitle: 'Artisan Cake, Brownies & Wijsman Butter Cookies',
-  boutiqueStatus: 'Butik Buka • Melayani Pesanan',
+  boutiqueStatus: 'Toko Buka • Melayani Pesanan',
   boutiqueAddress: 'Jl. Cikini Raya No. 42, Menteng, Jakarta Pusat',
   boutiqueHours: '09:00 - 20:00 WITA',
   boutiqueHoursWeekend: '10:00 - 18:00 WITA',
@@ -157,6 +158,7 @@ interface CMSContextType {
   orders: OrderRecord[];
   refreshOrders: () => Promise<void>;
   updateOrderStatus: (orderId: string, status: OrderRecord['status']) => Promise<void>;
+  updateOrderSchedule: (orderId: string, scheduleTime: string) => Promise<void>;
   deleteOrder: (orderId: string) => Promise<void>;
   // Konfigurasi Kredensial Supabase
   supabaseUrl: string;
@@ -237,9 +239,13 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (parsed.packagingImages?.ekopack?.includes('photo-1607344645866-009c320c5ab8')) {
           parsed.packagingImages.ekopack = DEFAULT_STORE_CONFIG.packagingImages?.ekopack;
         }
+        if (parsed.boutiqueStatus) {
+          parsed.boutiqueStatus = parsed.boutiqueStatus.replace(/butik/gi, 'Toko');
+        }
         rawConfig = {
           ...DEFAULT_STORE_CONFIG,
           ...parsed,
+          boutiqueStatus: parsed.boutiqueStatus?.replace(/butik/gi, 'Toko') || DEFAULT_STORE_CONFIG.boutiqueStatus,
           packagingImages: {
             ...DEFAULT_STORE_CONFIG.packagingImages,
             ...(parsed.packagingImages || {}),
@@ -611,6 +617,13 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTimeout(() => setSyncNotice(null), 3000);
   };
 
+  const updateOrderSchedule = async (orderId: string, scheduleTime: string) => {
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, scheduleTime } : o)));
+    await updateOrderScheduleInDb(orderId, scheduleTime);
+    setSyncNotice(`Jadwal pesanan #${orderId} berhasil diatur: ${scheduleTime}.`);
+    setTimeout(() => setSyncNotice(null), 3000);
+  };
+
   const deleteOrder = async (orderId: string) => {
     setOrders((prev) => prev.filter((o) => o.id !== orderId));
     await deleteOrderFromDb(orderId);
@@ -670,6 +683,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         orders,
         refreshOrders,
         updateOrderStatus,
+        updateOrderSchedule,
         deleteOrder,
         supabaseUrl,
         supabaseAnonKey,
