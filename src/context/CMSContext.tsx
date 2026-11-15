@@ -160,6 +160,9 @@ interface CMSContextType {
   updateOrderStatus: (orderId: string, status: OrderRecord['status']) => Promise<void>;
   updateOrderSchedule: (orderId: string, scheduleTime: string) => Promise<void>;
   deleteOrder: (orderId: string) => Promise<void>;
+  // Pengaturan Urutan Etalase Produk
+  moveProduct: (productId: string, direction: 'up' | 'down' | 'top' | 'bottom') => Promise<void>;
+  reorderProducts: (newProducts: Product[]) => Promise<void>;
   // Konfigurasi Kredensial Supabase
   supabaseUrl: string;
   supabaseAnonKey: string;
@@ -263,6 +266,29 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         rawProducts = JSON.parse(savedProducts);
       } catch (e) {
         console.error(e);
+      }
+    }
+
+    // Pastikan Bingkisan Spesial A & B selalu lengkap tersedia dengan 3 pilihan
+    if (!rawProducts.some(p => p.name.toLowerCase().includes('bingkisan a') || p.name.toLowerCase().includes('spesial a'))) {
+      const prodA = INITIAL_PRODUCTS.find(p => p.id === 'prod-hampers-a');
+      if (prodA) {
+        const idxB = rawProducts.findIndex(p => p.name.toLowerCase().includes('bingkisan'));
+        if (idxB !== -1) {
+          rawProducts.splice(idxB, 0, prodA);
+        } else {
+          rawProducts.push(prodA);
+        }
+      }
+    }
+    const idxB = rawProducts.findIndex(p => p.name.toLowerCase().includes('bingkisan') && p.name.toLowerCase().includes('b'));
+    if (idxB !== -1 && (!rawProducts[idxB].sizes || rawProducts[idxB].sizes!.length < 3)) {
+      const defaultB = INITIAL_PRODUCTS.find(p => p.id === 'prod-7');
+      if (defaultB && defaultB.sizes) {
+        rawProducts[idxB] = {
+          ...rawProducts[idxB],
+          sizes: defaultB.sizes,
+        };
       }
     }
 
@@ -571,6 +597,44 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTimeout(() => setSyncNotice(null), 3500);
   };
 
+  // Pengaturan Urutan Produk di Etalase Toko
+  const reorderProducts = async (newProducts: Product[]) => {
+    setProducts(newProducts);
+    localStorage.setItem('bintang_has_custom_edits', 'true');
+    try {
+      localStorage.setItem('bintang_products', JSON.stringify(newProducts));
+    } catch (e) {
+      console.warn(e);
+    }
+    await pushCloudStoreData({
+      storeConfig,
+      products: newProducts,
+      orders,
+    });
+  };
+
+  const moveProduct = async (productId: string, direction: 'up' | 'down' | 'top' | 'bottom') => {
+    const currentIndex = products.findIndex((p) => p.id === productId);
+    if (currentIndex === -1) return;
+
+    const newProducts = [...products];
+    const [movedItem] = newProducts.splice(currentIndex, 1);
+
+    if (direction === 'up') {
+      const targetIndex = Math.max(0, currentIndex - 1);
+      newProducts.splice(targetIndex, 0, movedItem);
+    } else if (direction === 'down') {
+      const targetIndex = Math.min(newProducts.length, currentIndex + 1);
+      newProducts.splice(targetIndex, 0, movedItem);
+    } else if (direction === 'top') {
+      newProducts.unshift(movedItem);
+    } else if (direction === 'bottom') {
+      newProducts.push(movedItem);
+    }
+
+    await reorderProducts(newProducts);
+  };
+
   // Ulasan Pelanggan (Cerita Pelanggan)
   const addCustomerReview = async (reviewData: Omit<CustomerReview, 'id' | 'date'>) => {
     const newRev: CustomerReview = {
@@ -685,6 +749,8 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateOrderStatus,
         updateOrderSchedule,
         deleteOrder,
+        moveProduct,
+        reorderProducts,
         supabaseUrl,
         supabaseAnonKey,
         updateSupabaseCredentials,

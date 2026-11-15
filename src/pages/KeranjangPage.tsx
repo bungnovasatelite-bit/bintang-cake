@@ -16,6 +16,7 @@ import {
   Check,
   AlertCircle,
   MessageCircle,
+  MessageSquare,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useNavigation } from '../context/NavigationContext';
@@ -37,6 +38,9 @@ export const KeranjangPage: React.FC = () => {
 
   // Alamat pengantaran khusus pengiriman kurir
   const [deliveryAddress, setDeliveryAddress] = useState('');
+
+  // Kotak isian kartu ucapan pesanan
+  const [cartGreetingNote, setCartGreetingNote] = useState('');
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,7 +98,7 @@ export const KeranjangPage: React.FC = () => {
           price: item.price,
           quantity: item.quantity,
           selectedSize: item.selectedSize,
-          note: item.note,
+          note: item.note || (cartGreetingNote ? `Kartu Ucapan: "${cartGreetingNote}"` : undefined),
         })),
       });
 
@@ -132,6 +136,11 @@ export const KeranjangPage: React.FC = () => {
       ? lastOrderedItems.map(it => `• ${it.quantity}x ${it.name} [${it.selectedSize || it.packageType}] - ${formatIDR(it.price * it.quantity)}`).join('\n')
       : 'Pesanan Aneka Kue Bintang Cake';
 
+    const allNotes = [
+      ...lastOrderedItems.map(it => it.note).filter(Boolean),
+      cartGreetingNote.trim() ? `Kartu Ucapan: "${cartGreetingNote.trim()}"` : '',
+    ].filter(Boolean);
+
     const waText = encodeURIComponent(
       `Halo Bintang Cake, saya sudah membuat pesanan dengan No Pesanan *#${orderSuccessMsg.id}*.\n\n` +
       `*Nama Pemesan:* ${customerName}\n` +
@@ -140,6 +149,7 @@ export const KeranjangPage: React.FC = () => {
       (deliveryMode === 'courier' && deliveryAddress ? `*Alamat Pengantaran:* ${deliveryAddress}\n` : '') +
       `*Jadwal:* Menunggu Konfirmasi & Penjadwalan oleh Admin Bintang Cake\n` +
       `*Metode Pembayaran:* ${paymentMethod === 'qris' ? 'QRIS Instant' : 'Transfer Bank'}\n\n` +
+      (allNotes.length > 0 ? `*Kartu Ucapan / Catatan:*\n${allNotes.map(n => `• ${n}`).join('\n')}\n\n` : '') +
       `*Rincian Kemasan & Produk:*\n${itemsList}\n\n` +
       `*Total Tagihan:* ${formatIDR(grandTotal)}\n\n` +
       `Mohon segera diproses dan dikonfirmasi jadwalnya ya Admin. Terima kasih!`
@@ -300,6 +310,11 @@ export const KeranjangPage: React.FC = () => {
                   <p className="text-[10px] text-[#8C7A6B] line-clamp-1 mt-0.5 font-medium">
                     {item.selectedSize || item.packageType || 'Kemasan Standar'}
                   </p>
+                  {item.note && (
+                    <p className="text-[9.5px] text-[#8B5E3C] mt-1 line-clamp-2 bg-[#FAF5EE] px-2 py-0.5 rounded-lg border border-[#EFE5D9]">
+                      💌 {item.note}
+                    </p>
+                  )}
                 </div>
 
                 <button
@@ -313,7 +328,7 @@ export const KeranjangPage: React.FC = () => {
 
               {/* Price & Stepper */}
               <div className="flex items-center justify-between mt-2 pt-1 border-t border-[#F8F1E8]">
-                <span className="font-serif font-bold text-xs sm:text-sm text-[#4A2810]">
+                <span className="font-price font-bold text-xs sm:text-sm text-[#4A2810]">
                   {formatIDR(item.price)}
                 </span>
 
@@ -351,7 +366,7 @@ export const KeranjangPage: React.FC = () => {
         <div className="space-y-1.5 text-xs text-[#6B5749]">
           <div className="flex justify-between">
             <span>Subtotal ({totalItems} Item Kue)</span>
-            <span className="font-semibold text-[#3D2314]">{formatIDR(subtotal)}</span>
+            <span className="font-price font-bold text-[#3D2314]">{formatIDR(subtotal)}</span>
           </div>
           <div className="flex justify-between">
             <span>Estimasi Ongkos Kirim</span>
@@ -366,7 +381,7 @@ export const KeranjangPage: React.FC = () => {
             <span className="block text-xs font-bold text-[#3D2314]">Total Pembayaran</span>
             <span className="text-[10px] text-[#8C7A6B]">Termasuk Dus Kemasan Eksklusif</span>
           </div>
-          <span className="font-serif font-bold text-lg text-[#3D2314]">
+          <span className="font-price font-bold text-lg text-[#3D2314]">
             {formatIDR(grandTotal)}
           </span>
         </div>
@@ -469,6 +484,30 @@ export const KeranjangPage: React.FC = () => {
               </span>
             </div>
           )}
+
+          {/* Kotak Kartu Ucapan dengan isian kosong untuk diisi pelanggan */}
+          <div className="p-3 rounded-2xl bg-[#FFFDFB] border border-[#E8DACB] space-y-1.5">
+            <div className="flex justify-between items-center">
+              <label className="text-[11px] font-bold text-[#4A2810] flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5 text-[#B87D48]" />
+                <span>Kartu Ucapan (Gratis)</span>
+              </label>
+              <span className="text-[9.5px] text-[#8C7A6B]">
+                {cartGreetingNote.length}/150
+              </span>
+            </div>
+            <p className="text-[10px] text-[#8C7A6B]">
+              Tulis pesan atau ucapan yang ingin disertakan pada kartu ucapan pesanan ini:
+            </p>
+            <textarea
+              rows={2}
+              maxLength={150}
+              value={cartGreetingNote}
+              onChange={(e) => setCartGreetingNote(e.target.value)}
+              placeholder="Tulis ucapan kartu di sini (contoh: Selamat Ulang Tahun Sarah, semoga sehat dan sukses selalu)..."
+              className="w-full px-3 py-2 rounded-xl bg-[#F8F3EC] border border-[#E8DACB] font-medium text-[#3D2314] placeholder-[#A8988B] focus:outline-none focus:border-[#4A2810] text-xs resize-none"
+            />
+          </div>
 
           {/* JADWAL PENGAMBILAN / PENGANTARAN: SEPENUHNYA DITENTUKAN OLEH ADMIN */}
           <div className="p-3.5 rounded-2xl bg-[#FAF5EE] border border-[#E8DACB] flex items-start gap-3">
@@ -620,7 +659,7 @@ export const KeranjangPage: React.FC = () => {
                 </div>
 
                 <p className="text-[10px] text-[#8C7A6B] text-center">
-                  Silakan transfer tepat sesuai total tagihan ({formatIDR(grandTotal)}).
+                  Silakan transfer tepat sesuai total tagihan (<span className="font-price font-bold text-[#3D2314]">{formatIDR(grandTotal)}</span>).
                 </p>
               </div>
             )}

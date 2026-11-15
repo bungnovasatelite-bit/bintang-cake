@@ -35,7 +35,12 @@ import {
   Package,
   Calculator,
   Truck,
-  Calendar
+  Calendar,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  ChevronsUp,
+  ChevronsDown,
 } from 'lucide-react';
 import { useCMS } from '../../context/CMSContext';
 import { Product, ProductCategory } from '../../types';
@@ -73,6 +78,7 @@ export const CMSModal: React.FC = () => {
     setEditingProductTarget,
     targetAddCategory,
     setTargetAddCategory,
+    moveProduct,
   } = useCMS();
 
   // Login form state
@@ -118,6 +124,22 @@ export const CMSModal: React.FC = () => {
   const [formPkgEkopack, setFormPkgEkopack] = useState<string>('');
   const [formPkgMika, setFormPkgMika] = useState<string>('');
   const [formPkgKaca, setFormPkgKaca] = useState<string>('');
+
+  // 3 Pilihan Paket Khusus Hampers di CMS
+  const [formHampName1, setFormHampName1] = useState('Paket 2 Toples Classic');
+  const [formHampPortion1, setFormHampPortion1] = useState('2 Toples Cookies (Nastar & Kastengel) + Box Pita Satin');
+  const [formHampPrice1, setFormHampPrice1] = useState<number>(195000);
+  const [formHampImage1, setFormHampImage1] = useState('');
+
+  const [formHampName2, setFormHampName2] = useState('Paket 3 Toples Favorit');
+  const [formHampPortion2, setFormHampPortion2] = useState('3 Toples Cookies (Nastar, Kastengel, Putri Salju) + Hardbox');
+  const [formHampPrice2, setFormHampPrice2] = useState<number>(280000);
+  const [formHampImage2, setFormHampImage2] = useState('');
+
+  const [formHampName3, setFormHampName3] = useState('Paket 4 Toples Sultan');
+  const [formHampPortion3, setFormHampPortion3] = useState('4 Toples Lengkap Aneka Varian + Hardbox Mewah');
+  const [formHampPrice3, setFormHampPrice3] = useState<number>(370000);
+  const [formHampImage3, setFormHampImage3] = useState('');
 
   // Pengaturan Foto Bentuk Kemasan Global Bawaan Toko
   const [packagingMinipack, setPackagingMinipack] = useState(storeConfig.packagingImages?.minipack || '');
@@ -368,6 +390,23 @@ ON CONFLICT (id) DO NOTHING;
     setFormPkgEkopack('');
     setFormPkgMika('');
     setFormPkgKaca('');
+
+    // Default 3 pilihan hampers
+    setFormHampName1('Paket 2 Toples Classic');
+    setFormHampPortion1('2 Toples Cookies (Nastar & Kastengel) + Box Pita Satin');
+    setFormHampPrice1(195000);
+    setFormHampImage1('');
+
+    setFormHampName2('Paket 3 Toples Favorit');
+    setFormHampPortion2('3 Toples Cookies (Nastar, Kastengel, Putri Salju) + Hardbox');
+    setFormHampPrice2(280000);
+    setFormHampImage2('');
+
+    setFormHampName3('Paket 4 Toples Sultan');
+    setFormHampPortion3('4 Toples Lengkap Aneka Varian + Hardbox Mewah');
+    setFormHampPrice3(370000);
+    setFormHampImage3('');
+
     applyAutoPackagePrices(defaultPrice);
     setIsEditingProduct(true);
   };
@@ -404,7 +443,57 @@ ON CONFLICT (id) DO NOTHING;
     setFormPkgMika(p.packagingImages?.mika || '');
     setFormPkgKaca(p.packagingImages?.kaca || '');
 
+    // Muat 3 pilihan hampers jika produk ini adalah hampers
+    if (p.sizes && p.sizes.length >= 3) {
+      setFormHampName1(p.sizes[0].name);
+      setFormHampPortion1(p.sizes[0].portion);
+      setFormHampPrice1(p.sizes[0].price);
+      setFormHampImage1(p.sizes[0].image || p.packagingImages?.hamper1 || '');
+
+      setFormHampName2(p.sizes[1].name);
+      setFormHampPortion2(p.sizes[1].portion);
+      setFormHampPrice2(p.sizes[1].price);
+      setFormHampImage2(p.sizes[1].image || p.packagingImages?.hamper2 || '');
+
+      setFormHampName3(p.sizes[2].name);
+      setFormHampPortion3(p.sizes[2].portion);
+      setFormHampPrice3(p.sizes[2].price);
+      setFormHampImage3(p.sizes[2].image || p.packagingImages?.hamper3 || '');
+    } else {
+      setFormHampName1('Paket 2 Toples Classic');
+      setFormHampPortion1('2 Toples Cookies (Nastar & Kastengel) + Box Pita Satin');
+      setFormHampPrice1(Math.round(p.price * 0.75 / 1000) * 1000 || 195000);
+      setFormHampImage1(p.packagingImages?.hamper1 || '');
+
+      setFormHampName2('Paket 3 Toples Favorit');
+      setFormHampPortion2('3 Toples Cookies (Nastar, Kastengel, Putri Salju) + Hardbox');
+      setFormHampPrice2(p.price || 280000);
+      setFormHampImage2(p.packagingImages?.hamper2 || '');
+
+      setFormHampName3('Paket 4 Toples Sultan');
+      setFormHampPortion3('4 Toples Lengkap Aneka Varian + Hardbox Mewah');
+      setFormHampPrice3(Math.round(p.price * 1.35 / 1000) * 1000 || 370000);
+      setFormHampImage3(p.packagingImages?.hamper3 || '');
+    }
+
     setIsEditingProduct(true);
+  };
+
+  const handleCMSHamperImageUpload = async (index: 1 | 2 | 3, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        setIsCompressingImg(true);
+        const compressed = await compressImage(file, 700, 700, 0.75);
+        if (index === 1) setFormHampImage1(compressed);
+        if (index === 2) setFormHampImage2(compressed);
+        if (index === 3) setFormHampImage3(compressed);
+      } catch (err) {
+        console.error('Gagal kompresi foto:', err);
+      } finally {
+        setIsCompressingImg(false);
+      }
+    }
   };
 
   // Upload gambar produk
@@ -524,6 +613,8 @@ ON CONFLICT (id) DO NOTHING;
     const badgeVal = formBadge === 'NONE' ? undefined : (formBadge as any);
 
     const isCookieOrLidah = formCategory === 'cookies' || formCategory === 'lidah-kucing';
+    const isHampers = formCategory === 'hampers';
+
     const computedSizes = isCookieOrLidah
       ? [
           { name: 'Minipack 150 gr', portion: '150 gr • Camilan praktis', price: Number(pkgPriceMinipack150) || 0 },
@@ -535,6 +626,12 @@ ON CONFLICT (id) DO NOTHING;
           { name: 'Toples Mika Ulir 1000 gr', portion: '1000 gr • Toples mika ulir jumbo 1 kg', price: Number(pkgPriceMika1000) || 0 },
           { name: 'Toples Kaca 150 gr', portion: '150 gr • Jar toples kaca mewah', price: Number(pkgPriceKaca150) || 0 },
         ]
+      : isHampers
+      ? [
+          { name: formHampName1 || 'Paket 1', portion: formHampPortion1 || '', price: Number(formHampPrice1) || 0, image: formHampImage1, badge: 'Pilihan 1' },
+          { name: formHampName2 || 'Paket 2', portion: formHampPortion2 || '', price: Number(formHampPrice2) || 0, image: formHampImage2, badge: 'Pilihan 2' },
+          { name: formHampName3 || 'Paket 3', portion: formHampPortion3 || '', price: Number(formHampPrice3) || 0, image: formHampImage3, badge: 'Pilihan 3' },
+        ]
       : undefined;
 
     const computedPackagingImages = isCookieOrLidah
@@ -543,6 +640,12 @@ ON CONFLICT (id) DO NOTHING;
           ekopack: formPkgEkopack.trim() || undefined,
           mika: formPkgMika.trim() || undefined,
           kaca: formPkgKaca.trim() || undefined,
+        }
+      : isHampers
+      ? {
+          hamper1: formHampImage1.trim() || undefined,
+          hamper2: formHampImage2.trim() || undefined,
+          hamper3: formHampImage3.trim() || undefined,
         }
       : undefined;
 
@@ -1359,6 +1462,166 @@ ON CONFLICT (id) DO NOTHING;
                       </>
                     )}
 
+                    {/* KHUSUS KATEGORI HAMPERS: 3 PILIHAN PAKET & FOTO */}
+                    {formCategory === 'hampers' && (
+                      <div className="p-3.5 bg-[#FFFDFB] rounded-2xl border border-[#E8DACB] space-y-3">
+                        <div className="flex items-center gap-1.5 text-[#4A2810]">
+                          <Package className="w-4 h-4 text-[#8B5E3C]" />
+                          <span className="text-xs font-bold">Atur 3 Pilihan Paket Hampers</span>
+                        </div>
+                        <p className="text-[10.5px] text-[#8C7A6B] leading-relaxed">
+                          Tentukan nama paket, rincian isi, harga, dan foto untuk 3 variasi paket hampers yang dapat dipilih konsumen (seperti pada kemasan cookies).
+                        </p>
+
+                        {/* PILIHAN 1 */}
+                        <div className="p-2.5 bg-white rounded-xl border border-[#E8DACB] space-y-1.5">
+                          <span className="text-[11px] font-bold text-[#3D2314] block">1. Pilihan Pertama</span>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              value={formHampName1}
+                              onChange={(e) => setFormHampName1(e.target.value)}
+                              placeholder="Nama Paket (misal: Paket 2 Toples)"
+                              className="w-full px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-bold text-[#3D2314] focus:outline-none"
+                            />
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] font-bold text-[#8C7A6B]">Rp</span>
+                              <input
+                                type="number"
+                                value={formHampPrice1}
+                                onChange={(e) => setFormHampPrice1(Number(e.target.value))}
+                                className="w-full px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-bold text-[#3D2314] text-right focus:outline-none font-price"
+                              />
+                            </div>
+                          </div>
+                          <input
+                            type="text"
+                            value={formHampPortion1}
+                            onChange={(e) => setFormHampPortion1(e.target.value)}
+                            placeholder="Rincian isi (misal: 2 Toples Cookies Pilihan + Box Pita)"
+                            className="w-full px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                          />
+                          <div className="flex items-center gap-2">
+                            <label className="px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10px] font-bold text-[#4A2810] flex items-center gap-1 cursor-pointer hover:bg-[#F3E8DA]">
+                              <Upload className="w-3 h-3" />
+                              <span>Pilih Foto</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleCMSHamperImageUpload(1, e)}
+                                className="hidden"
+                              />
+                            </label>
+                            <input
+                              type="text"
+                              value={formHampImage1}
+                              onChange={(e) => setFormHampImage1(e.target.value)}
+                              placeholder="Atau URL foto paket 1..."
+                              className="flex-1 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10px] text-[#3D2314] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* PILIHAN 2 */}
+                        <div className="p-2.5 bg-white rounded-xl border border-[#E8DACB] space-y-1.5">
+                          <span className="text-[11px] font-bold text-[#3D2314] block">2. Pilihan Kedua</span>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              value={formHampName2}
+                              onChange={(e) => setFormHampName2(e.target.value)}
+                              placeholder="Nama Paket (misal: Paket 3 Toples)"
+                              className="w-full px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-bold text-[#3D2314] focus:outline-none"
+                            />
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] font-bold text-[#8C7A6B]">Rp</span>
+                              <input
+                                type="number"
+                                value={formHampPrice2}
+                                onChange={(e) => setFormHampPrice2(Number(e.target.value))}
+                                className="w-full px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-bold text-[#3D2314] text-right focus:outline-none font-price"
+                              />
+                            </div>
+                          </div>
+                          <input
+                            type="text"
+                            value={formHampPortion2}
+                            onChange={(e) => setFormHampPortion2(e.target.value)}
+                            placeholder="Rincian isi (misal: 3 Toples Cookies Favorit + Hardbox)"
+                            className="w-full px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                          />
+                          <div className="flex items-center gap-2">
+                            <label className="px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10px] font-bold text-[#4A2810] flex items-center gap-1 cursor-pointer hover:bg-[#F3E8DA]">
+                              <Upload className="w-3 h-3" />
+                              <span>Pilih Foto</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleCMSHamperImageUpload(2, e)}
+                                className="hidden"
+                              />
+                            </label>
+                            <input
+                              type="text"
+                              value={formHampImage2}
+                              onChange={(e) => setFormHampImage2(e.target.value)}
+                              placeholder="Atau URL foto paket 2..."
+                              className="flex-1 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10px] text-[#3D2314] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* PILIHAN 3 */}
+                        <div className="p-2.5 bg-white rounded-xl border border-[#E8DACB] space-y-1.5">
+                          <span className="text-[11px] font-bold text-[#3D2314] block">3. Pilihan Ketiga</span>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              value={formHampName3}
+                              onChange={(e) => setFormHampName3(e.target.value)}
+                              placeholder="Nama Paket (misal: Paket 4 Toples Sultan)"
+                              className="w-full px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-bold text-[#3D2314] focus:outline-none"
+                            />
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] font-bold text-[#8C7A6B]">Rp</span>
+                              <input
+                                type="number"
+                                value={formHampPrice3}
+                                onChange={(e) => setFormHampPrice3(Number(e.target.value))}
+                                className="w-full px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-bold text-[#3D2314] text-right focus:outline-none font-price"
+                              />
+                            </div>
+                          </div>
+                          <input
+                            type="text"
+                            value={formHampPortion3}
+                            onChange={(e) => setFormHampPortion3(e.target.value)}
+                            placeholder="Rincian isi (misal: 4 Toples Lengkap Aneka Varian + Hadiah)"
+                            className="w-full px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                          />
+                          <div className="flex items-center gap-2">
+                            <label className="px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10px] font-bold text-[#4A2810] flex items-center gap-1 cursor-pointer hover:bg-[#F3E8DA]">
+                              <Upload className="w-3 h-3" />
+                              <span>Pilih Foto</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleCMSHamperImageUpload(3, e)}
+                                className="hidden"
+                              />
+                            </label>
+                            <input
+                              type="text"
+                              value={formHampImage3}
+                              onChange={(e) => setFormHampImage3(e.target.value)}
+                              placeholder="Atau URL foto paket 3..."
+                              className="flex-1 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10px] text-[#3D2314] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                       <div className="flex gap-2 pt-2">
                         <button
                           type="button"
@@ -1404,6 +1667,15 @@ ON CONFLICT (id) DO NOTHING;
                         ))}
                       </div>
 
+                      {/* Petunjuk Pengaturan Urutan Tampil di Etalase */}
+                      <div className="p-3 rounded-2xl bg-[#FAF5EE] border border-[#E8DACB] flex items-start gap-2.5">
+                        <ArrowUpDown className="w-4 h-4 text-[#8B5E3C] shrink-0 mt-0.5" />
+                        <div className="text-[11px] text-[#5C4534] leading-relaxed">
+                          <strong className="text-[#3D2314] block mb-0.5">Pengaturan Urutan Etalase Toko:</strong>
+                          Urutan di bawah ini menentukan posisi kue yang dilihat pembeli di etalase toko &amp; beranda. Gunakan tombol panah <strong>⬆️ / ⬇️</strong> atau tombol <strong>🔝 Teratas / 🔻 Terbawah</strong> pada setiap kue untuk menentukan produk mana yang tampil paling duluan atau paling bawah.
+                        </div>
+                      </div>
+
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-[#4A2810]">
                           Katalog ({filteredCmsProducts.length} Item)
@@ -1419,54 +1691,108 @@ ON CONFLICT (id) DO NOTHING;
 
                       {filteredCmsProducts.length > 0 ? (
                         <div className="space-y-2">
-                          {filteredCmsProducts.map((p) => (
-                            <div
-                              key={p.id}
-                              className="p-3 rounded-2xl bg-white border border-[#E8DACB] shadow-xs flex items-center justify-between gap-3"
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <img
-                                  src={p.image}
-                                  alt={p.name}
-                                  className="w-12 h-12 rounded-xl object-cover shrink-0 bg-[#FAF5EE]"
-                                />
-                                <div className="min-w-0">
-                                  <h5 className="font-serif font-bold text-xs text-[#3D2314] truncate">
-                                    {p.name}
-                                  </h5>
-                                  <p className="text-[10px] text-[#8C7A6B]">
-                                    Rp {p.price.toLocaleString('id-ID')} • {p.category.toUpperCase()}
-                                  </p>
-                                  {p.badge && (
-                                    <span className="inline-block text-[8.5px] font-bold px-1.5 py-0.2 rounded-full bg-[#FAF5EE] text-[#A03D2A] border border-[#F5C7B9]">
-                                      {p.badge}
-                                    </span>
-                                  )}
+                          {filteredCmsProducts.map((p) => {
+                            const globalIndex = products.findIndex((prod) => prod.id === p.id);
+                            const isFirst = globalIndex === 0;
+                            const isLast = globalIndex === products.length - 1;
+
+                            return (
+                              <div
+                                key={p.id}
+                                className="p-3 rounded-2xl bg-white border border-[#E8DACB] shadow-xs flex items-center justify-between gap-3"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  {/* Nomor Urut Posisi */}
+                                  <span
+                                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg bg-[#FAF5EE] text-[#4A2810] border border-[#E8DACB] shrink-0"
+                                    title={`Urutan tampil ke-${globalIndex + 1}`}
+                                  >
+                                    #{globalIndex + 1}
+                                  </span>
+
+                                  <img
+                                    src={p.image}
+                                    alt={p.name}
+                                    className="w-12 h-12 rounded-xl object-cover shrink-0 bg-[#FAF5EE]"
+                                  />
+                                  <div className="min-w-0">
+                                    <h5 className="font-serif font-bold text-xs text-[#3D2314] truncate">
+                                      {p.name}
+                                    </h5>
+                                    <p className="text-[10px] text-[#8C7A6B]">
+                                      <span className="font-price font-bold text-[#4A2810]">Rp {p.price.toLocaleString('id-ID')}</span> • {p.category.toUpperCase()}
+                                    </p>
+                                    {p.badge && (
+                                      <span className="inline-block text-[8.5px] font-bold px-1.5 py-0.2 rounded-full bg-[#FAF5EE] text-[#A03D2A] border border-[#F5C7B9]">
+                                        {p.badge}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {/* Tombol Atur Urutan Etalase */}
+                                  <div className="flex items-center bg-[#FAF5EE] p-0.5 rounded-xl border border-[#E8DACB] mr-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => moveProduct(p.id, 'top')}
+                                      disabled={isFirst}
+                                      className="p-1 rounded-lg hover:bg-[#F3E8DA] disabled:opacity-30 disabled:cursor-not-allowed text-[#4A2810] cursor-pointer"
+                                      title="Pindahkan ke paling atas (Tampil #1 di Etalase)"
+                                    >
+                                      <ChevronsUp className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => moveProduct(p.id, 'up')}
+                                      disabled={isFirst}
+                                      className="p-1 rounded-lg hover:bg-[#F3E8DA] disabled:opacity-30 disabled:cursor-not-allowed text-[#4A2810] cursor-pointer"
+                                      title="Pindahkan 1 posisi ke atas"
+                                    >
+                                      <ArrowUp className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => moveProduct(p.id, 'down')}
+                                      disabled={isLast}
+                                      className="p-1 rounded-lg hover:bg-[#F3E8DA] disabled:opacity-30 disabled:cursor-not-allowed text-[#4A2810] cursor-pointer"
+                                      title="Pindahkan 1 posisi ke bawah"
+                                    >
+                                      <ArrowDown className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => moveProduct(p.id, 'bottom')}
+                                      disabled={isLast}
+                                      className="p-1 rounded-lg hover:bg-[#F3E8DA] disabled:opacity-30 disabled:cursor-not-allowed text-[#4A2810] cursor-pointer"
+                                      title="Pindahkan ke paling bawah di Etalase"
+                                    >
+                                      <ChevronsDown className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+
+                                  <button
+                                    onClick={() => openEditProductForm(p)}
+                                    className="p-1.5 rounded-lg bg-[#FAF5EE] hover:bg-[#F3E8DA] text-[#4A2810] cursor-pointer"
+                                    title="Edit Produk"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`Hapus produk "${p.name}"?`)) {
+                                        deleteProduct(p.id);
+                                      }
+                                    }}
+                                    className="p-1.5 rounded-lg bg-[#FAF5EE] hover:bg-[#FDECE8] text-[#A03D2A] cursor-pointer"
+                                    title="Hapus Produk"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
                               </div>
-
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button
-                                  onClick={() => openEditProductForm(p)}
-                                  className="p-1.5 rounded-lg bg-[#FAF5EE] hover:bg-[#F3E8DA] text-[#4A2810] cursor-pointer"
-                                  title="Edit Produk"
-                                >
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    if (confirm(`Hapus produk "${p.name}"?`)) {
-                                      deleteProduct(p.id);
-                                    }
-                                  }}
-                                  className="p-1.5 rounded-lg bg-[#FAF5EE] hover:bg-[#FDECE8] text-[#A03D2A] cursor-pointer"
-                                  title="Hapus Produk"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       ) : (
                         <div className="text-center py-8 text-xs text-[#8C7A6B] bg-white rounded-2xl border border-[#E8DACB]">
@@ -1518,7 +1844,7 @@ ON CONFLICT (id) DO NOTHING;
                         <Coins className="w-3.5 h-3.5" />
                         <span className="text-[10px] font-bold text-[#8C7A6B]">Total Omset</span>
                       </div>
-                      <p className="font-serif font-bold text-xs sm:text-sm text-[#4A2810] truncate leading-none">
+                      <p className="font-price font-bold text-xs sm:text-sm text-[#4A2810] truncate leading-none">
                         Rp {totalRevenue.toLocaleString('id-ID')}
                       </p>
                       <span className="text-[9px] text-[#2C6E49] font-medium block">Akumulasi Penjualan</span>
@@ -1698,11 +2024,18 @@ ON CONFLICT (id) DO NOTHING;
                             </div>
 
                             {/* Items list */}
-                            <div className="p-2 rounded-xl bg-[#FAF5EE] space-y-1 text-[11px] text-[#5C4534]">
+                            <div className="p-2 rounded-xl bg-[#FAF5EE] space-y-1.5 text-[11px] text-[#5C4534]">
                               {ord.items.map((it, idx) => (
-                                <div key={idx} className="flex justify-between">
-                                  <span>{it.quantity}x {it.productName} {it.selectedSize ? `(${it.selectedSize})` : ''}</span>
-                                  <span className="font-semibold">Rp {(it.price * it.quantity).toLocaleString('id-ID')}</span>
+                                <div key={idx} className="space-y-0.5 border-b border-[#EFE5D9]/60 pb-1 last:border-b-0 last:pb-0">
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-semibold text-[#3D2314]">{it.quantity}x {it.productName} {it.selectedSize ? `(${it.selectedSize})` : ''}</span>
+                                    <span className="font-price font-bold text-[#4A2810]">Rp {(it.price * it.quantity).toLocaleString('id-ID')}</span>
+                                  </div>
+                                  {it.note && (
+                                    <p className="text-[10px] text-[#8B5E3C] bg-white/80 px-2 py-0.5 rounded-md border border-[#E8DACB]">
+                                      💌 {it.note}
+                                    </p>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -1711,7 +2044,7 @@ ON CONFLICT (id) DO NOTHING;
                             <div className="flex items-center justify-between pt-1 border-t border-[#F5EFE6]">
                               <div>
                                 <span className="text-[10px] text-[#8C7A6B] block">Total Pesanan</span>
-                                <span className="font-serif font-bold text-xs sm:text-sm text-[#4A2810]">
+                                <span className="font-price font-bold text-xs sm:text-sm text-[#4A2810]">
                                   Rp {ord.totalAmount.toLocaleString('id-ID')}
                                 </span>
                               </div>

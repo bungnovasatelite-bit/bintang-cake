@@ -71,16 +71,38 @@ export const INITIAL_PRODUCTS: Product[] = [
     description: 'Cookies mentega berbutir choco chip leleh melimpah, renyah di tepi dan lembut gurih di bagian tengah.'
   },
   {
+    id: 'prod-hampers-a',
+    name: 'Bingkisan Spesial A',
+    category: 'hampers',
+    packageType: 'HAMPERS EXCLUSIVE',
+    price: 195000,
+    rating: 5.0,
+    reviewCount: 64,
+    badge: 'SPECIAL GIFT',
+    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=600&q=80',
+    description: 'Hampers eksklusif Bingkisan A dengan box elegan dan pita satin, berisi aneka toples cookies pilihan mentega Wijsman serta kartu ucapan istimewa.',
+    sizes: [
+      { name: 'Paket 2 Toples Classic', portion: '2 Toples Cookies (Nastar Wijsman & Kastengel) + Box Cantik Pita Satin', price: 195000, badge: 'Favorit' },
+      { name: 'Paket 3 Toples Favorit', portion: '3 Toples Cookies (Nastar, Kastengel, Putri Salju) + Hardbox Mewah', price: 280000, badge: 'Best Seller' },
+      { name: 'Paket 4 Toples Sultan', portion: '4 Toples Lengkap (Nastar, Kastengel, Lidah Kucing, Sagu Keju) + Hardbox Gold', price: 370000, badge: 'Premium Exclusive' },
+    ]
+  },
+  {
     id: 'prod-7',
     name: 'Bingkisan Spesial B',
     category: 'hampers',
-    packageType: 'HAMPERS',
-    price: 280000,
+    packageType: 'HAMPERS EXCLUSIVE',
+    price: 185000,
     rating: 5.0,
     reviewCount: 48,
     badge: 'SPECIAL GIFT',
     image: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=600&q=80',
-    description: 'Paket hampers eksklusif berisi 3 toples kue kering pilihan, kartu ucapan gold foil, dan kotak pita satin mewah.'
+    description: 'Paket hampers eksklusif Bingkisan B berisi kombinasi toples kue kering lezat, kartu ucapan eksklusif, dan kotak kado berpita satin mewah.',
+    sizes: [
+      { name: 'Paket Manis 2 Toples', portion: '2 Toples Cookies (Palm Cookies & Choco Chip Butter) + Box Pita Hias', price: 185000, badge: 'Ekonomis' },
+      { name: 'Paket Komplit 3 Toples', portion: '3 Toples Cookies (Choco Chip, Peanut Cookies, Lidah Kucing) + Hardbox Elegan', price: 275000, badge: 'Best Seller' },
+      { name: 'Paket Mewah 4 Toples', portion: '4 Toples Aneka Cookies Pilihan + Greeting Card Gold Foil & Hardbox Mewah', price: 365000, badge: 'Eksklusif' },
+    ]
   },
   {
     id: 'prod-8',

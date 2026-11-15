@@ -8,7 +8,6 @@ import {
   Minus,
   ShoppingBag,
   MessageSquare,
-  Sparkles,
   Check,
   Package,
   Layers,
@@ -27,6 +26,8 @@ import {
   getPackagingStylesShowcase,
   getCookiePackageOptions,
   DEFAULT_PACKAGING_IMAGES,
+  getHamperPackageOptions,
+  HamperOption,
 } from '../data/packageOptions';
 import { compressImage } from '../utils/imageCompressor';
 
@@ -49,6 +50,43 @@ export const DetailProdukModal: React.FC = () => {
 
   // Cek apakah produk masuk kategori cookies atau lidah-kucing
   const isCookieOrLidah = liveProduct.category === 'cookies' || liveProduct.category === 'lidah-kucing';
+  const isHampers = liveProduct.category === 'hampers' || liveProduct.name.toLowerCase().includes('bingkisan');
+
+  // 3 Pilihan Paket untuk Hampers / Bingkisan
+  const hamperOptions: HamperOption[] = useMemo(() => {
+    return isHampers
+      ? getHamperPackageOptions(
+          liveProduct.name,
+          liveProduct.price,
+          liveProduct.sizes,
+          {
+            hamper1: liveProduct.packagingImages?.hamper1,
+            hamper2: liveProduct.packagingImages?.hamper2,
+            hamper3: liveProduct.packagingImages?.hamper3,
+          },
+          liveProduct.image
+        )
+      : [];
+  }, [isHampers, liveProduct.name, liveProduct.price, liveProduct.sizes, liveProduct.packagingImages, liveProduct.image]);
+
+  const [selectedHamperIndex, setSelectedHamperIndex] = useState(0);
+
+  // Modal State 4: Edit 3 Pilihan Paket Hampers (Admin)
+  const [isEditingHamperModalOpen, setIsEditingHamperModalOpen] = useState(false);
+  const [hampName1, setHampName1] = useState('');
+  const [hampPortion1, setHampPortion1] = useState('');
+  const [hampPrice1, setHampPrice1] = useState<number>(0);
+  const [hampImage1, setHampImage1] = useState('');
+
+  const [hampName2, setHampName2] = useState('');
+  const [hampPortion2, setHampPortion2] = useState('');
+  const [hampPrice2, setHampPrice2] = useState<number>(0);
+  const [hampImage2, setHampImage2] = useState('');
+
+  const [hampName3, setHampName3] = useState('');
+  const [hampPortion3, setHampPortion3] = useState('');
+  const [hampPrice3, setHampPrice3] = useState<number>(0);
+  const [hampImage3, setHampImage3] = useState('');
 
   // 4 Gaya Kemasan Utama berfoto dinamis KHUSUS untuk produk ini (liveProduct)
   // Prioritas:
@@ -85,8 +123,6 @@ export const DetailProdukModal: React.FC = () => {
 
   // Jumlah pesanan & catatan
   const [quantity, setQuantity] = useState(1);
-  const [candleChoice, setCandleChoice] = useState('Lilin Ulir Klasik (Free 2 Pcs)');
-  const [cookieGreetingOption, setCookieGreetingOption] = useState('Pita Hias & Segel Emas (Free)');
   const [greetingCardText, setGreetingCardText] = useState('');
   const [bakerNote, setBakerNote] = useState('');
   const [isLiked, setIsLiked] = useState(false);
@@ -115,7 +151,7 @@ export const DetailProdukModal: React.FC = () => {
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
-  const [pendingAction, setPendingAction] = useState<'edit_images' | 'edit_prices' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'edit_images' | 'edit_prices' | 'edit_hamper' | null>(null);
 
   useEffect(() => {
     setImgMinipack(liveProduct.packagingImages?.minipack || '');
@@ -123,6 +159,77 @@ export const DetailProdukModal: React.FC = () => {
     setImgMika(liveProduct.packagingImages?.mika || '');
     setImgKaca(liveProduct.packagingImages?.kaca || '');
   }, [liveProduct.id, liveProduct.packagingImages]);
+
+  // Helper buka editor hampers
+  const openHamperEditorDirect = () => {
+    const currentOpts = hamperOptions;
+    if (currentOpts.length >= 3) {
+      setHampName1(currentOpts[0].name);
+      setHampPortion1(currentOpts[0].portion);
+      setHampPrice1(currentOpts[0].price);
+      setHampImage1(currentOpts[0].image);
+
+      setHampName2(currentOpts[1].name);
+      setHampPortion2(currentOpts[1].portion);
+      setHampPrice2(currentOpts[1].price);
+      setHampImage2(currentOpts[1].image);
+
+      setHampName3(currentOpts[2].name);
+      setHampPortion3(currentOpts[2].portion);
+      setHampPrice3(currentOpts[2].price);
+      setHampImage3(currentOpts[2].image);
+    }
+    setIsEditingHamperModalOpen(true);
+  };
+
+  const openHamperEditor = () => {
+    if (!isAdminLoggedIn) {
+      setPendingAction('edit_hamper');
+      setIsAuthPromptOpen(true);
+      return;
+    }
+    openHamperEditorDirect();
+  };
+
+  const handleUploadHamperImage = async (
+    index: 1 | 2 | 3,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        setIsCompressingImg(true);
+        const compressed = await compressImage(file, 800, 800, 0.8);
+        if (index === 1) setHampImage1(compressed);
+        if (index === 2) setHampImage2(compressed);
+        if (index === 3) setHampImage3(compressed);
+      } catch (err) {
+        console.error('Gagal kompresi foto:', err);
+      } finally {
+        setIsCompressingImg(false);
+      }
+    }
+  };
+
+  const handleSaveHamperOptions = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const newSizes = [
+      { name: hampName1 || 'Paket 1', portion: hampPortion1 || '', price: Number(hampPrice1) || 0, image: hampImage1, badge: 'Pilihan 1' },
+      { name: hampName2 || 'Paket 2', portion: hampPortion2 || '', price: Number(hampPrice2) || 0, image: hampImage2, badge: 'Pilihan 2' },
+      { name: hampName3 || 'Paket 3', portion: hampPortion3 || '', price: Number(hampPrice3) || 0, image: hampImage3, badge: 'Pilihan 3' },
+    ];
+    await updateProduct(liveProduct.id, {
+      sizes: newSizes,
+      price: Number(hampPrice1) || liveProduct.price,
+      packagingImages: {
+        ...liveProduct.packagingImages,
+        hamper1: hampImage1,
+        hamper2: hampImage2,
+        hamper3: hampImage3,
+      }
+    });
+    setIsEditingHamperModalOpen(false);
+  };
 
   // Helper kalkulasi standar harga kemasan
   const calculateStandardPackagePrices = (base: number) => {
@@ -206,6 +313,8 @@ export const DetailProdukModal: React.FC = () => {
         setIsEditingPackagingModalOpen(true);
       } else if (pendingAction === 'edit_prices') {
         openPricesEditorDirect();
+      } else if (pendingAction === 'edit_hamper') {
+        openHamperEditorDirect();
       }
       setPendingAction(null);
     } else {
@@ -284,30 +393,50 @@ export const DetailProdukModal: React.FC = () => {
     return cookieOptions.find((o) => o.id === selectedPackageId) || cookieOptions[2] || cookieOptions[0];
   }, [cookieOptions, selectedPackageId]);
 
+  // Paket yang sedang dipilih untuk hampers (3 Pilihan)
+  const selectedHamperOption = hamperOptions[selectedHamperIndex] || hamperOptions[0];
+
   // Ukuran cake yang sedang dipilih
   const currentCakeSize = defaultCakeSizes[selectedCakeSizeIndex] || defaultCakeSizes[0];
 
   // Harga satuan saat ini
-  const currentUnitPrice = isCookieOrLidah ? selectedCookiePackage.price : currentCakeSize.price;
+  const currentUnitPrice = isCookieOrLidah
+    ? selectedCookiePackage.price
+    : isHampers && selectedHamperOption
+    ? selectedHamperOption.price
+    : currentCakeSize.price;
   const totalPrice = currentUnitPrice * quantity;
 
   const formatIDR = (val: number) => 'Rp ' + val.toLocaleString('id-ID');
 
   const handleAddToCart = () => {
+    const combinedNote = [
+      greetingCardText.trim() ? `Kartu Ucapan: "${greetingCardText.trim()}"` : '',
+      bakerNote.trim() ? `Catatan: ${bakerNote.trim()}` : '',
+    ].filter(Boolean).join(' | ');
+
     if (isCookieOrLidah) {
       addToCart(
         selectedProduct,
         quantity,
         selectedCookiePackage.name,
-        bakerNote ? `Catatan: ${bakerNote}` : undefined,
+        combinedNote || undefined,
         selectedCookiePackage.price
+      );
+    } else if (isHampers && selectedHamperOption) {
+      addToCart(
+        selectedProduct,
+        quantity,
+        selectedHamperOption.name,
+        combinedNote || undefined,
+        selectedHamperOption.price
       );
     } else {
       addToCart(
         selectedProduct,
         quantity,
         currentCakeSize.name,
-        bakerNote ? `Catatan: ${bakerNote}` : undefined,
+        combinedNote || undefined,
         currentCakeSize.price
       );
     }
@@ -377,10 +506,22 @@ export const DetailProdukModal: React.FC = () => {
             <h1 className="font-serif font-bold text-xl text-[#3D2314]">
               {selectedProduct.name}
             </h1>
-            <p className="text-xs font-semibold text-[#8B5E3C] mt-0.5">
-              {isCookieOrLidah
-                ? `Mulai dari ${formatIDR(cookieOptions[0]?.price || selectedProduct.price)} • 8 Pilihan Kemasan`
-                : `Mulai dari ${formatIDR(selectedProduct.price)}`}
+            <p className="text-xs font-semibold text-[#8B5E3C] mt-0.5 flex items-center gap-1 flex-wrap">
+              <span>Mulai dari</span>
+              <span className="font-price font-bold text-sm text-[#3D2314]">
+                {isCookieOrLidah
+                  ? formatIDR(cookieOptions[0]?.price || selectedProduct.price)
+                  : isHampers
+                  ? formatIDR(hamperOptions[0]?.price || selectedProduct.price)
+                  : formatIDR(selectedProduct.price)}
+              </span>
+              <span>
+                {isCookieOrLidah
+                  ? '• 8 Pilihan Kemasan'
+                  : isHampers
+                  ? '• 3 Pilihan Paket'
+                  : ''}
+              </span>
             </p>
 
             <div className="flex items-center gap-1.5 text-[11px] text-[#7A6657] mt-2">
@@ -555,7 +696,7 @@ export const DetailProdukModal: React.FC = () => {
 
                         {/* Harga di samping kanan */}
                         <div className="text-right shrink-0">
-                          <span className="font-serif font-bold text-xs sm:text-sm block">
+                          <span className="font-price font-bold text-xs sm:text-sm block">
                             {formatIDR(opt.price)}
                           </span>
                           <span
@@ -571,53 +712,117 @@ export const DetailProdukModal: React.FC = () => {
                   })}
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Pelengkap Khusus Cookies & Lidah Kucing (Pita Hias & Kartu Ucapan) */}
-              <div className="p-3.5 rounded-2xl bg-[#FFFDFB] border border-[#EFE5D9] space-y-2.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#3D2314]">
-                  <Sparkles className="w-4 h-4 text-[#B87D48]" />
-                  <span>Pelengkap Kemasan &amp; Hadiah (Gratis)</span>
+          {/* ========================================================================= */}
+          {/* SEKSI KHUSUS HAMPERS / BINGKISAN: 3 PILIHAN PAKET (SEPERTI PADA COOKIES)  */}
+          {/* ========================================================================= */}
+          {isHampers && (
+            <div className="space-y-4">
+              {/* Header & Tombol Edit Admin */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <Package className="w-4 h-4 text-[#8B5E3C]" />
+                  <h3 className="font-serif font-bold text-xs sm:text-sm text-[#3D2314]">
+                    Pilihan Paket Hampers (3 Pilihan)
+                  </h3>
                 </div>
+                <button
+                  type="button"
+                  onClick={openHamperEditor}
+                  className="px-2.5 py-1 rounded-xl bg-[#4A2810] text-[#FAF5EE] hover:bg-[#341A08] text-[10.5px] font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
+                  title="Atur foto dan harga 3 pilihan paket hampers"
+                >
+                  <Pencil className="w-3 h-3 text-[#EAD1B6]" />
+                  <span>Atur 3 Pilihan &amp; Foto</span>
+                </button>
+              </div>
 
-                <div>
-                  <label className="block text-[10.5px] text-[#8C7A6B] mb-1">
-                    Pilihan Dekorasi &amp; Segel
-                  </label>
-                  <select
-                    value={cookieGreetingOption}
-                    onChange={(e) => setCookieGreetingOption(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#3D2314] focus:outline-none cursor-pointer"
-                  >
-                    <option>Pita Hias &amp; Segel Emas (Free)</option>
-                    <option>Sertakan Kartu Ucapan Khusus (Free)</option>
-                    <option>Kemasan Standar Polos</option>
-                  </select>
-                </div>
-
-                {cookieGreetingOption.includes('Kartu Ucapan') && (
-                  <div>
-                    <div className="flex justify-between text-[10.5px] text-[#8C7A6B] mb-1">
-                      <span>Pesan Kartu Ucapan Singkat</span>
-                      <span>{greetingCardText.length}/100</span>
+              {/* Showcase 3 Kartu Paket Hampers */}
+              <div className="grid grid-cols-3 gap-2">
+                {hamperOptions.map((hOpt, idx) => {
+                  const isSelected = selectedHamperIndex === idx;
+                  return (
+                    <div
+                      key={hOpt.id}
+                      onClick={() => setSelectedHamperIndex(idx)}
+                      className={`p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                        isSelected
+                          ? 'bg-[#4A2810] text-white border-[#4A2810] shadow-sm'
+                          : 'bg-[#FFFDFB] text-[#3D2314] border-[#EFE5D9] hover:bg-[#FAF5EE]'
+                      }`}
+                    >
+                      <div className="w-full aspect-square rounded-xl overflow-hidden mb-1.5 bg-[#FAF5EE]">
+                        <img src={hOpt.image} alt={hOpt.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold line-clamp-1">{hOpt.name}</p>
+                        <p className={`text-[8.5px] line-clamp-1 mt-0.5 ${isSelected ? 'text-[#EAD1B6]' : 'text-[#8C7A6B]'}`}>
+                          {hOpt.badge || `Pilihan ${idx + 1}`}
+                        </p>
+                      </div>
                     </div>
-                    <textarea
-                      value={greetingCardText}
-                      maxLength={100}
-                      onChange={(e) => setGreetingCardText(e.target.value)}
-                      placeholder="Contoh: Selamat menikmati kue nastar dan lidah kucing spesial..."
-                      rows={2}
-                      className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#3D2314] placeholder-[#A8988B] focus:outline-none resize-none"
-                    />
-                  </div>
-                )}
+                  );
+                })}
+              </div>
+
+              {/* List 3 Pilihan Paket & Isi */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-[#3D2314]">Pilih Rincian Isi Hampers</span>
+                  <span className="text-[#8C7A6B]">3 Pilihan</span>
+                </div>
+
+                {hamperOptions.map((hOpt, idx) => {
+                  const isSelected = selectedHamperIndex === idx;
+                  return (
+                    <div
+                      key={hOpt.id}
+                      onClick={() => setSelectedHamperIndex(idx)}
+                      className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                        isSelected
+                          ? 'bg-[#4A2810] text-[#FFFDF9] border-[#4A2810] shadow-sm'
+                          : 'bg-[#FFFDFB] text-[#3D2314] border-[#EFE5D9] hover:bg-[#FAF5EE]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#FAF5EE] shrink-0 border border-[#E8DACB]">
+                          <img src={hOpt.image} alt={hOpt.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-bold text-xs">{hOpt.name}</p>
+                            {hOpt.badge && (
+                              <span className={`text-[8.5px] font-bold px-1.5 py-0.2 rounded-full ${
+                                isSelected ? 'bg-[#EAD1B6] text-[#4A2810]' : 'bg-[#F4E9DC] text-[#7A5844]'
+                              }`}>
+                                {hOpt.badge}
+                              </span>
+                            )}
+                            {isSelected && <Check className="w-3.5 h-3.5 text-[#EAD1B6] shrink-0" />}
+                          </div>
+                          <p className={`text-[10px] mt-0.5 line-clamp-2 ${isSelected ? 'text-[#EAD1B6]' : 'text-[#8C7A6B]'}`}>
+                            {hOpt.portion}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="font-price font-bold text-xs sm:text-sm block">
+                          {formatIDR(hOpt.price)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
 
           {/* ========================================================================= */}
-          {/* SEKSI UNTUK KATEGORI LAIN (CAKE, BROWNIES, HAMPERS, CUSTOM) - TIDAK DIRUBAH*/}
+          {/* SEKSI UNTUK KATEGORI LAIN (CAKE, BROWNIES, CUSTOM)                        */}
           {/* ========================================================================= */}
-          {!isCookieOrLidah && (
+          {!isCookieOrLidah && !isHampers && (
             <div className="space-y-4">
               {/* Size / Variant Options Cake */}
               {selectedProduct.sizes && selectedProduct.sizes.length > 0 && (
@@ -649,7 +854,7 @@ export const DetailProdukModal: React.FC = () => {
                               {sz.portion}
                             </p>
                           </div>
-                          <span className="font-serif font-bold text-xs sm:text-sm">
+                          <span className="font-price font-bold text-xs sm:text-sm">
                             {formatIDR(sz.price)}
                           </span>
                         </div>
@@ -658,46 +863,34 @@ export const DetailProdukModal: React.FC = () => {
                   </div>
                 </div>
               )}
-
-              {/* Perlengkapan Pesta Cake */}
-              <div className="p-3.5 rounded-2xl bg-[#FFFDFB] border border-[#EFE5D9] space-y-2.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#3D2314]">
-                  <Sparkles className="w-4 h-4 text-[#B87D48]" />
-                  <span>Gratis Perlengkapan Pesta</span>
-                </div>
-
-                <div>
-                  <label className="block text-[10.5px] text-[#8C7A6B] mb-1">
-                    Pilihan Lilin (Free)
-                  </label>
-                  <select
-                    value={candleChoice}
-                    onChange={(e) => setCandleChoice(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#3D2314] focus:outline-none"
-                  >
-                    <option>Lilin Ulir Klasik (Free 2 Pcs)</option>
-                    <option>Lilin Angka Emas (Free 1 Pcs)</option>
-                    <option>Tanpa Lilin</option>
-                  </select>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-[10.5px] text-[#8C7A6B] mb-1">
-                    <span>Kartu Ucapan Gold Foil (Free)</span>
-                    <span>{greetingCardText.length}/100</span>
-                  </div>
-                  <textarea
-                    value={greetingCardText}
-                    maxLength={100}
-                    onChange={(e) => setGreetingCardText(e.target.value)}
-                    placeholder="Tuliskan ucapan singkat (contoh: Happy Birthday Sarah tersayang!)..."
-                    rows={2}
-                    className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#3D2314] placeholder-[#A8988B] focus:outline-none resize-none"
-                  />
-                </div>
-              </div>
             </div>
           )}
+
+          {/* ========================================================================= */}
+          {/* KARTU UCAPAN (GRATIS) DENGAN KOTAK ISIAN KOSONG UNTUK SEMUA PRODUK        */}
+          {/* ========================================================================= */}
+          <div className="p-3.5 rounded-2xl bg-[#FFFDFB] border border-[#EFE5D9] space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#3D2314]">
+                <MessageSquare className="w-4 h-4 text-[#B87D48]" />
+                <span>Kartu Ucapan (Gratis)</span>
+              </div>
+              <span className="text-[10px] text-[#8C7A6B] font-medium">
+                {greetingCardText.length}/150
+              </span>
+            </div>
+            <p className="text-[10.5px] text-[#8C7A6B]">
+              Tulis pesan atau ucapan khusus yang ingin dicetak pada kartu ucapan pesanan:
+            </p>
+            <textarea
+              value={greetingCardText}
+              maxLength={150}
+              onChange={(e) => setGreetingCardText(e.target.value)}
+              placeholder="Tulis ucapan Anda di sini (contoh: Selamat Ulang Tahun Ibu tersayang, semoga sehat dan bahagia selalu)..."
+              rows={2}
+              className="w-full px-3 py-2 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#3D2314] placeholder-[#A8988B] focus:outline-none focus:border-[#4A2810] resize-none transition-all"
+            />
+          </div>
 
           {/* Quantity Stepper */}
           <div className="p-3.5 rounded-2xl bg-[#FFFDFB] border border-[#EFE5D9] flex items-center justify-between">
@@ -768,7 +961,7 @@ export const DetailProdukModal: React.FC = () => {
               <ShoppingBag className="w-4 h-4 text-[#D4A373]" />
               Tambah ke Keranjang
             </span>
-            <span className="font-serif">{formatIDR(totalPrice)}</span>
+            <span className="font-price font-bold text-sm sm:text-base">{formatIDR(totalPrice)}</span>
           </button>
         </div>
 
@@ -1406,6 +1599,237 @@ export const DetailProdukModal: React.FC = () => {
                     className="flex-1 py-2.5 rounded-xl bg-[#4A2810] text-white text-xs font-bold shadow-md hover:bg-[#341A08] cursor-pointer"
                   >
                     {isSyncing ? 'Menyimpan...' : 'Simpan Harga Kemasan'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ================= MODAL 4: EDIT 3 PILIHAN PAKET HAMPERS ================= */}
+        {isEditingHamperModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+            <div className="w-full max-w-lg max-h-[92vh] overflow-y-auto bg-[#FAF5EE] rounded-3xl border border-[#E8DACB] p-4 sm:p-5 shadow-2xl space-y-4 no-scrollbar">
+              <div className="flex justify-between items-center pb-2 border-b border-[#E8DACB]">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-[#4A2810] text-white flex items-center justify-center">
+                    <Package className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif font-bold text-sm text-[#3D2314]">
+                      Atur 3 Pilihan Paket Hampers
+                    </h3>
+                    <p className="text-[10px] text-[#8C7A6B]">{liveProduct.name}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingHamperModalOpen(false)}
+                  className="p-1 rounded-full text-[#8C7A6B] hover:text-[#3D2314] hover:bg-[#F3E8DA] cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveHamperOptions} className="space-y-4">
+                <p className="text-[10.5px] text-[#8C7A6B] leading-relaxed">
+                  Sesuaikan nama paket, isi bingkisan, foto, dan harga untuk 3 pilihan yang dapat dipilih oleh konsumen.
+                </p>
+
+                {/* PILIHAN 1 */}
+                <div className="p-3 bg-white rounded-2xl border border-[#E8DACB] space-y-2">
+                  <span className="text-xs font-bold text-[#4A2810] block">Pilihan 1 (Misal: Paket 2 Toples)</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] text-[#8C7A6B] mb-0.5 font-semibold">Nama Pilihan</label>
+                      <input
+                        type="text"
+                        value={hampName1}
+                        onChange={(e) => setHampName1(e.target.value)}
+                        placeholder="Contoh: Paket 2 Toples Classic"
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-[#8C7A6B] mb-0.5 font-semibold">Harga (Rp)</label>
+                      <input
+                        type="number"
+                        value={hampPrice1}
+                        onChange={(e) => setHampPrice1(Number(e.target.value))}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] focus:outline-none font-price"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[#8C7A6B] mb-0.5 font-semibold">Rincian Isi Bingkisan</label>
+                    <input
+                      type="text"
+                      value={hampPortion1}
+                      onChange={(e) => setHampPortion1(e.target.value)}
+                      placeholder="Contoh: 2 Toples Cookies Pilihan + Box Pita Cantik"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#3D2314] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[#8C7A6B] mb-0.5 font-semibold">Foto Paket 1</label>
+                    <div className="flex items-center gap-2">
+                      <label className="px-2.5 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] font-bold text-[#4A2810] flex items-center gap-1 cursor-pointer hover:bg-[#F3E8DA]">
+                        <Upload className="w-3 h-3" />
+                        <span>Pilih Foto</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleUploadHamperImage(1, e)}
+                          className="hidden"
+                        />
+                      </label>
+                      <input
+                        type="text"
+                        value={hampImage1}
+                        onChange={(e) => setHampImage1(e.target.value)}
+                        placeholder="Atau URL foto paket 1..."
+                        className="flex-1 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* PILIHAN 2 */}
+                <div className="p-3 bg-white rounded-2xl border border-[#E8DACB] space-y-2">
+                  <span className="text-xs font-bold text-[#4A2810] block">Pilihan 2 (Misal: Paket 3 Toples)</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] text-[#8C7A6B] mb-0.5 font-semibold">Nama Pilihan</label>
+                      <input
+                        type="text"
+                        value={hampName2}
+                        onChange={(e) => setHampName2(e.target.value)}
+                        placeholder="Contoh: Paket 3 Toples Favorit"
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-[#8C7A6B] mb-0.5 font-semibold">Harga (Rp)</label>
+                      <input
+                        type="number"
+                        value={hampPrice2}
+                        onChange={(e) => setHampPrice2(Number(e.target.value))}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] focus:outline-none font-price"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[#8C7A6B] mb-0.5 font-semibold">Rincian Isi Bingkisan</label>
+                    <input
+                      type="text"
+                      value={hampPortion2}
+                      onChange={(e) => setHampPortion2(e.target.value)}
+                      placeholder="Contoh: 3 Toples Cookies Favorit + Hardbox Mewah"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#3D2314] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[#8C7A6B] mb-0.5 font-semibold">Foto Paket 2</label>
+                    <div className="flex items-center gap-2">
+                      <label className="px-2.5 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] font-bold text-[#4A2810] flex items-center gap-1 cursor-pointer hover:bg-[#F3E8DA]">
+                        <Upload className="w-3 h-3" />
+                        <span>Pilih Foto</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleUploadHamperImage(2, e)}
+                          className="hidden"
+                        />
+                      </label>
+                      <input
+                        type="text"
+                        value={hampImage2}
+                        onChange={(e) => setHampImage2(e.target.value)}
+                        placeholder="Atau URL foto paket 2..."
+                        className="flex-1 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* PILIHAN 3 */}
+                <div className="p-3 bg-white rounded-2xl border border-[#E8DACB] space-y-2">
+                  <span className="text-xs font-bold text-[#4A2810] block">Pilihan 3 (Misal: Paket 4 Toples Sultan)</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] text-[#8C7A6B] mb-0.5 font-semibold">Nama Pilihan</label>
+                      <input
+                        type="text"
+                        value={hampName3}
+                        onChange={(e) => setHampName3(e.target.value)}
+                        placeholder="Contoh: Paket 4 Toples Sultan"
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] focus:outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-[#8C7A6B] mb-0.5 font-semibold">Harga (Rp)</label>
+                      <input
+                        type="number"
+                        value={hampPrice3}
+                        onChange={(e) => setHampPrice3(Number(e.target.value))}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] focus:outline-none font-price"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[#8C7A6B] mb-0.5 font-semibold">Rincian Isi Bingkisan</label>
+                    <input
+                      type="text"
+                      value={hampPortion3}
+                      onChange={(e) => setHampPortion3(e.target.value)}
+                      placeholder="Contoh: 4 Toples Lengkap Aneka Varian + Hadiah Khusus"
+                      className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs text-[#3D2314] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-[#8C7A6B] mb-0.5 font-semibold">Foto Paket 3</label>
+                    <div className="flex items-center gap-2">
+                      <label className="px-2.5 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] font-bold text-[#4A2810] flex items-center gap-1 cursor-pointer hover:bg-[#F3E8DA]">
+                        <Upload className="w-3 h-3" />
+                        <span>Pilih Foto</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleUploadHamperImage(3, e)}
+                          className="hidden"
+                        />
+                      </label>
+                      <input
+                        type="text"
+                        value={hampImage3}
+                        onChange={(e) => setHampImage3(e.target.value)}
+                        placeholder="Atau URL foto paket 3..."
+                        className="flex-1 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingHamperModalOpen(false)}
+                    className="flex-1 py-2.5 rounded-xl bg-white border border-[#E8DACB] text-xs font-bold text-[#7A6657] cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSyncing}
+                    className="flex-1 py-2.5 rounded-xl bg-[#4A2810] text-white text-xs font-bold shadow-md hover:bg-[#341A08] cursor-pointer"
+                  >
+                    {isSyncing ? 'Menyimpan...' : 'Simpan 3 Pilihan Hampers'}
                   </button>
                 </div>
               </form>

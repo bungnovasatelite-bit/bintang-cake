@@ -36,7 +36,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const handlePlusClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (product.category === 'cookies' || product.category === 'lidah-kucing' || (product.sizes && product.sizes.length > 0)) {
+    if (
+      product.category === 'cookies' ||
+      product.category === 'lidah-kucing' ||
+      product.category === 'hampers' ||
+      (product.sizes && product.sizes.length > 0)
+    ) {
       openProductDetail(product);
     } else {
       addToCart(product, 1);
@@ -108,7 +113,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <span className="block text-[9.5px] text-[#9C8573] leading-none mb-0.5">
             Harga
           </span>
-          <span className="font-serif font-bold text-sm sm:text-base text-[#3D2314] leading-tight">
+          <span className="font-price font-bold text-sm sm:text-base text-[#3D2314] leading-tight">
             {formatIDR(product.price)}
           </span>
         </div>

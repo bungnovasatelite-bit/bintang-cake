@@ -204,3 +204,150 @@ export function getCookiePackageOptions(
     }
   ];
 }
+
+export interface HamperOption {
+  id: string;
+  name: string;
+  portion: string;
+  price: number;
+  badge?: string;
+  image: string;
+}
+
+export const DEFAULT_HAMPERS_IMAGES = {
+  hamper1: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=600&q=80',
+  hamper2: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=600&q=80',
+  hamper3: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80',
+};
+
+export function getHamperPackageOptions(
+  productName: string,
+  basePrice: number,
+  customSizes?: { name: string; portion: string; price: number; image?: string; badge?: string }[],
+  packagingImages?: { hamper1?: string; hamper2?: string; hamper3?: string },
+  fallbackImage?: string
+): HamperOption[] {
+  const isBingkisanA = productName.toLowerCase().includes('bingkisan a') || productName.toLowerCase().includes('spesial a');
+  const isBingkisanB = productName.toLowerCase().includes('bingkisan b') || productName.toLowerCase().includes('spesial b');
+
+  const fallback = fallbackImage || DEFAULT_HAMPERS_IMAGES.hamper2;
+  const imgs = {
+    hamper1: packagingImages?.hamper1 || DEFAULT_HAMPERS_IMAGES.hamper1,
+    hamper2: packagingImages?.hamper2 || DEFAULT_HAMPERS_IMAGES.hamper2,
+    hamper3: packagingImages?.hamper3 || DEFAULT_HAMPERS_IMAGES.hamper3,
+  };
+
+  if (customSizes && customSizes.length >= 3) {
+    return [
+      {
+        id: 'hamper-1',
+        name: customSizes[0].name,
+        portion: customSizes[0].portion,
+        price: customSizes[0].price,
+        badge: customSizes[0].badge || 'Pilihan 1',
+        image: customSizes[0].image || imgs.hamper1 || fallback,
+      },
+      {
+        id: 'hamper-2',
+        name: customSizes[1].name,
+        portion: customSizes[1].portion,
+        price: customSizes[1].price,
+        badge: customSizes[1].badge || 'Pilihan 2',
+        image: customSizes[1].image || imgs.hamper2 || fallback,
+      },
+      {
+        id: 'hamper-3',
+        name: customSizes[2].name,
+        portion: customSizes[2].portion,
+        price: customSizes[2].price,
+        badge: customSizes[2].badge || 'Pilihan 3',
+        image: customSizes[2].image || imgs.hamper3 || fallback,
+      },
+    ];
+  }
+
+  if (isBingkisanA) {
+    return [
+      {
+        id: 'hamp-a-1',
+        name: 'Paket 2 Toples Classic',
+        portion: '2 Toples Cookies (Nastar Wijsman & Kastengel) + Box Cantik Pita Satin',
+        price: 195000,
+        badge: 'Favorit',
+        image: imgs.hamper1,
+      },
+      {
+        id: 'hamp-a-2',
+        name: 'Paket 3 Toples Favorit',
+        portion: '3 Toples Cookies (Nastar, Kastengel, Putri Salju) + Hardbox Mewah',
+        price: 280000,
+        badge: 'Best Seller',
+        image: imgs.hamper2,
+      },
+      {
+        id: 'hamp-a-3',
+        name: 'Paket 4 Toples Sultan',
+        portion: '4 Toples Lengkap (Nastar, Kastengel, Lidah Kucing, Sagu Keju) + Hardbox Gold',
+        price: 370000,
+        badge: 'Premium Exclusive',
+        image: imgs.hamper3,
+      },
+    ];
+  }
+
+  if (isBingkisanB) {
+    return [
+      {
+        id: 'hamp-b-1',
+        name: 'Paket Manis 2 Toples',
+        portion: '2 Toples Cookies (Palm Cookies & Choco Chip Butter) + Box Pita Hias',
+        price: 185000,
+        badge: 'Ekonomis',
+        image: imgs.hamper1,
+      },
+      {
+        id: 'hamp-b-2',
+        name: 'Paket Komplit 3 Toples',
+        portion: '3 Toples Cookies (Choco Chip, Peanut Cookies, Lidah Kucing) + Hardbox Elegan',
+        price: 275000,
+        badge: 'Best Seller',
+        image: imgs.hamper2,
+      },
+      {
+        id: 'hamp-b-3',
+        name: 'Paket Mewah 4 Toples',
+        portion: '4 Toples Aneka Cookies Pilihan + Greeting Card Gold Foil & Hardbox Mewah',
+        price: 365000,
+        badge: 'Eksklusif',
+        image: imgs.hamper3,
+      },
+    ];
+  }
+
+  return [
+    {
+      id: 'hamp-gen-1',
+      name: 'Paket Silver (2 Toples)',
+      portion: '2 Toples Cookies Pilihan + Box Pita Eksklusif',
+      price: Math.round(basePrice * 0.75 / 1000) * 1000 || 185000,
+      badge: 'Pilihan 1',
+      image: imgs.hamper1,
+    },
+    {
+      id: 'hamp-gen-2',
+      name: 'Paket Gold (3 Toples)',
+      portion: '3 Toples Cookies Favorit + Hardbox Premium & Pita Satin',
+      price: basePrice || 280000,
+      badge: 'Best Seller',
+      image: imgs.hamper2,
+    },
+    {
+      id: 'hamp-gen-3',
+      name: 'Paket Platinum (4 Toples)',
+      portion: '4 Toples Lengkap Aneka Varian + Hadiah Khusus & Hardbox Mewah',
+      price: Math.round(basePrice * 1.35 / 1000) * 1000 || 365000,
+      badge: 'Eksklusif',
+      image: imgs.hamper3,
+    },
+  ];
+}

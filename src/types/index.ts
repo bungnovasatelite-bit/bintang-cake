@@ -13,13 +13,24 @@ export interface Product {
   badge?: 'BEST SELLER' | 'NEW ARRIVAL' | 'SPECIAL GIFT' | 'CUSTOM' | 'PROMO';
   image: string;
   description?: string;
-  sizes?: { name: string; portion: string; price: number; image?: string }[];
+  sizes?: { name: string; portion: string; price: number; image?: string; badge?: string }[];
   packagingImages?: {
     minipack?: string;
     ekopack?: string;
     mika?: string;
     kaca?: string;
+    hamper1?: string;
+    hamper2?: string;
+    hamper3?: string;
   };
+  hampersOptions?: {
+    id: string;
+    name: string;
+    portion: string;
+    price: number;
+    image?: string;
+    badge?: string;
+  }[];
 }
 
 export interface CartItem {
