@@ -97,6 +97,8 @@ export const DetailProdukModal: React.FC = () => {
       minipack: liveProduct.packagingImages?.minipack || DEFAULT_PACKAGING_IMAGES.minipack,
       ekopack: liveProduct.packagingImages?.ekopack || DEFAULT_PACKAGING_IMAGES.ekopack,
       mika: liveProduct.packagingImages?.mika || DEFAULT_PACKAGING_IMAGES.mika,
+      bundar: liveProduct.packagingImages?.bundar || DEFAULT_PACKAGING_IMAGES.bundar,
+      persegi: liveProduct.packagingImages?.persegi || DEFAULT_PACKAGING_IMAGES.persegi,
       kaca: liveProduct.packagingImages?.kaca || DEFAULT_PACKAGING_IMAGES.kaca,
     };
   }, [liveProduct.packagingImages]);
@@ -105,7 +107,7 @@ export const DetailProdukModal: React.FC = () => {
     return getPackagingStylesShowcase(effectivePackagingImages, liveProduct.image);
   }, [effectivePackagingImages, liveProduct.image]);
 
-  // 8 Pilihan kemasan untuk cookies & lidah kucing (harga & foto dinamis khusus produk ini)
+  // 10 Pilihan kemasan untuk cookies & lidah kucing (harga & foto dinamis khusus produk ini)
   const cookieOptions = useMemo(() => {
     return isCookieOrLidah
       ? getCookiePackageOptions(liveProduct.price, liveProduct.sizes, effectivePackagingImages, liveProduct.image)
@@ -133,17 +135,21 @@ export const DetailProdukModal: React.FC = () => {
   const [imgMinipack, setImgMinipack] = useState(liveProduct.packagingImages?.minipack || '');
   const [imgEkopack, setImgEkopack] = useState(liveProduct.packagingImages?.ekopack || '');
   const [imgMika, setImgMika] = useState(liveProduct.packagingImages?.mika || '');
+  const [imgBundar, setImgBundar] = useState(liveProduct.packagingImages?.bundar || '');
+  const [imgPersegi, setImgPersegi] = useState(liveProduct.packagingImages?.persegi || '');
   const [imgKaca, setImgKaca] = useState(liveProduct.packagingImages?.kaca || '');
   const [isCompressingImg, setIsCompressingImg] = useState(false);
 
-  // Modal State 2: Edit Harga 8 Kemasan
+  // Modal State 2: Edit Harga 10 Kemasan
   const [isEditingPricesModalOpen, setIsEditingPricesModalOpen] = useState(false);
   const [priceMinipack150, setPriceMinipack150] = useState<number>(0);
   const [priceEkopack200, setPriceEkopack200] = useState<number>(0);
   const [priceMika200, setPriceMika200] = useState<number>(0);
   const [priceMika250, setPriceMika250] = useState<number>(0);
+  const [priceBundar300, setPriceBundar300] = useState<number>(0);
   const [priceMika350, setPriceMika350] = useState<number>(0);
   const [priceMika500, setPriceMika500] = useState<number>(0);
+  const [pricePersegi500, setPricePersegi500] = useState<number>(0);
   const [priceMika1000, setPriceMika1000] = useState<number>(0);
   const [priceKaca150, setPriceKaca150] = useState<number>(0);
 
@@ -157,6 +163,8 @@ export const DetailProdukModal: React.FC = () => {
     setImgMinipack(liveProduct.packagingImages?.minipack || '');
     setImgEkopack(liveProduct.packagingImages?.ekopack || '');
     setImgMika(liveProduct.packagingImages?.mika || '');
+    setImgBundar(liveProduct.packagingImages?.bundar || '');
+    setImgPersegi(liveProduct.packagingImages?.persegi || '');
     setImgKaca(liveProduct.packagingImages?.kaca || '');
   }, [liveProduct.id, liveProduct.packagingImages]);
 
@@ -231,7 +239,7 @@ export const DetailProdukModal: React.FC = () => {
     setIsEditingHamperModalOpen(false);
   };
 
-  // Helper kalkulasi standar harga kemasan
+  // Helper kalkulasi standar harga kemasan (10 Pilihan)
   const calculateStandardPackagePrices = (base: number) => {
     const round1000 = (val: number) => Math.round(val / 1000) * 1000;
     return {
@@ -239,8 +247,10 @@ export const DetailProdukModal: React.FC = () => {
       ekopack200: round1000(base * 0.93),
       mika200: base,
       mika250: round1000(base * 1.22),
+      bundar300: round1000(base * 1.45),
       mika350: round1000(base * 1.67),
       mika500: round1000(base * 2.33),
+      persegi500: round1000(base * 2.33),
       mika1000: round1000(base * 4.33),
       kaca150: round1000(base * 1.05),
     };
@@ -252,8 +262,10 @@ export const DetailProdukModal: React.FC = () => {
     setPriceEkopack200(std.ekopack200);
     setPriceMika200(std.mika200);
     setPriceMika250(std.mika250);
+    setPriceBundar300(std.bundar300);
     setPriceMika350(std.mika350);
     setPriceMika500(std.mika500);
+    setPricePersegi500(std.persegi500);
     setPriceMika1000(std.mika1000);
     setPriceKaca150(std.kaca150);
   };
@@ -262,6 +274,8 @@ export const DetailProdukModal: React.FC = () => {
     setImgMinipack(liveProduct.packagingImages?.minipack || '');
     setImgEkopack(liveProduct.packagingImages?.ekopack || '');
     setImgMika(liveProduct.packagingImages?.mika || '');
+    setImgBundar(liveProduct.packagingImages?.bundar || '');
+    setImgPersegi(liveProduct.packagingImages?.persegi || '');
     setImgKaca(liveProduct.packagingImages?.kaca || '');
     setApplyToAllProducts(false);
 
@@ -286,8 +300,10 @@ export const DetailProdukModal: React.FC = () => {
     setPriceEkopack200(findSizePrice('Ekopack 200 gr', std.ekopack200));
     setPriceMika200(findSizePrice('Toples Mika Ulir 200 gr', std.mika200));
     setPriceMika250(findSizePrice('Toples Mika Ulir 250 gr', std.mika250));
+    setPriceBundar300(findSizePrice('Toples bundar 300 gr', std.bundar300));
     setPriceMika350(findSizePrice('Toples Mika Ulir 350 gr', std.mika350));
     setPriceMika500(findSizePrice('Toples Mika Ulir 500 gr', std.mika500));
+    setPricePersegi500(findSizePrice('Toples Persegi 500 gr', std.persegi500));
     setPriceMika1000(findSizePrice('Toples Mika Ulir 1000 gr', std.mika1000));
     setPriceKaca150(findSizePrice('Toples Kaca 150 gr', std.kaca150));
     setIsEditingPricesModalOpen(true);
@@ -323,7 +339,7 @@ export const DetailProdukModal: React.FC = () => {
   };
 
   const handleUploadPkgImage = async (
-    key: 'minipack' | 'ekopack' | 'mika' | 'kaca',
+    key: 'minipack' | 'ekopack' | 'mika' | 'bundar' | 'persegi' | 'kaca',
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
@@ -334,6 +350,8 @@ export const DetailProdukModal: React.FC = () => {
         if (key === 'minipack') setImgMinipack(compressed);
         if (key === 'ekopack') setImgEkopack(compressed);
         if (key === 'mika') setImgMika(compressed);
+        if (key === 'bundar') setImgBundar(compressed);
+        if (key === 'persegi') setImgPersegi(compressed);
         if (key === 'kaca') setImgKaca(compressed);
       } catch (err) {
         console.error('Gagal kompresi foto:', err);
@@ -349,6 +367,8 @@ export const DetailProdukModal: React.FC = () => {
       minipack: imgMinipack.trim() || undefined,
       ekopack: imgEkopack.trim() || undefined,
       mika: imgMika.trim() || undefined,
+      bundar: imgBundar.trim() || undefined,
+      persegi: imgPersegi.trim() || undefined,
       kaca: imgKaca.trim() || undefined,
     };
 
@@ -364,6 +384,8 @@ export const DetailProdukModal: React.FC = () => {
           minipack: imgMinipack,
           ekopack: imgEkopack,
           mika: imgMika,
+          bundar: imgBundar,
+          persegi: imgPersegi,
           kaca: imgKaca,
         },
       });
@@ -379,8 +401,10 @@ export const DetailProdukModal: React.FC = () => {
       { name: 'Ekopack 200 gr', portion: '200 gr • Standing pouch eco', price: Number(priceEkopack200) || 0 },
       { name: 'Toples Mika Ulir 200 gr', portion: '200 gr • Toples mika ulir kedap udara', price: Number(priceMika200) || 0 },
       { name: 'Toples Mika Ulir 250 gr', portion: '250 gr • Toples mika ulir sedang', price: Number(priceMika250) || 0 },
+      { name: 'Toples bundar 300 gr', portion: '300 gr • Toples bundar bening cantik', price: Number(priceBundar300) || 0 },
       { name: 'Toples Mika Ulir 350 gr', portion: '350 gr • Toples mika ulir besar', price: Number(priceMika350) || 0 },
       { name: 'Toples Mika Ulir 500 gr', portion: '500 gr • Toples mika ulir setengah kilo', price: Number(priceMika500) || 0 },
+      { name: 'Toples Persegi 500 gr', portion: '500 gr • Toples persegi hardtop kotak', price: Number(pricePersegi500) || 0 },
       { name: 'Toples Mika Ulir 1000 gr', portion: '1000 gr • Toples mika ulir jumbo 1 kg', price: Number(priceMika1000) || 0 },
       { name: 'Toples Kaca 150 gr', portion: '150 gr • Jar toples kaca mewah', price: Number(priceKaca150) || 0 },
     ];
@@ -517,7 +541,7 @@ export const DetailProdukModal: React.FC = () => {
               </span>
               <span>
                 {isCookieOrLidah
-                  ? '• 8 Pilihan Kemasan'
+                  ? '• 10 Pilihan Kemasan'
                   : isHampers
                   ? '• 3 Pilihan Paket'
                   : ''}
@@ -536,7 +560,7 @@ export const DetailProdukModal: React.FC = () => {
           </div>
 
           {/* ========================================================================= */}
-          {/* SEKSI KHUSUS COOKIES & LIDAH KUCING: GALERI KEMASAN + 8 PILIHAN UKURAN    */}
+          {/* SEKSI KHUSUS COOKIES & LIDAH KUCING: GALERI KEMASAN + 10 PILIHAN UKURAN   */}
           {/* ========================================================================= */}
           {isCookieOrLidah && (
             <div className="space-y-4">
@@ -619,23 +643,23 @@ export const DetailProdukModal: React.FC = () => {
                 </div>
               </div>
 
-              {/* DAFTAR 8 PILIHAN KEMASAN DENGAN HARGA DI SAMPINGNYA */}
+              {/* DAFTAR 10 PILIHAN KEMASAN DENGAN HARGA DI SAMPINGNYA */}
               <div className="space-y-2.5 pt-1">
                 <div className="flex justify-between items-center text-xs flex-wrap gap-2">
                   <div className="flex items-center gap-1.5">
                     <Package className="w-4 h-4 text-[#8B5E3C]" />
                     <span className="font-bold text-[#3D2314]">
-                      Pilih Ukuran &amp; Kemasan (8 Pilihan)
+                      Pilih Ukuran &amp; Kemasan (10 Pilihan)
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={openPricesEditor}
                     className="px-2.5 py-1 rounded-xl bg-[#4A2810] text-[#FAF5EE] hover:bg-[#341A08] text-[10.5px] font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
-                    title="Ubah harga 8 pilihan kemasan untuk produk ini"
+                    title="Ubah harga 10 pilihan kemasan untuk produk ini"
                   >
                     <Pencil className="w-3 h-3 text-[#EAD1B6]" />
-                    <span>Edit Harga 8 Kemasan</span>
+                    <span>Edit Harga 10 Kemasan</span>
                   </button>
                 </div>
 
@@ -1289,10 +1313,154 @@ export const DetailProdukModal: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 4. Toples Kaca Mewah */}
+                {/* 4. Toples Bundar */}
                 <div className="p-3 bg-white rounded-2xl border border-[#E8DACB] space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-[#3D2314]">4. Toples Kaca Mewah (150 gr)</p>
+                    <p className="text-xs font-bold text-[#3D2314]">4. Toples Bundar (300 gr)</p>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#EAD1B6] text-[#4A2810]">
+                      Toples Bundar
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#FAF5EE] border border-[#E8DACB] shrink-0">
+                      {imgBundar ? (
+                        <img
+                          src={imgBundar}
+                          alt="Toples Bundar"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              DEFAULT_PACKAGING_IMAGES.bundar;
+                          }}
+                        />
+                      ) : (
+                        <img
+                          src={liveProduct.image || DEFAULT_PACKAGING_IMAGES.bundar}
+                          alt="Toples Bundar Fallback"
+                          className="w-full h-full object-cover opacity-60"
+                        />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <label className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
+                          {isCompressingImg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                          <span>Upload Foto</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleUploadPkgImage('bundar', e)}
+                            className="hidden"
+                            disabled={isCompressingImg}
+                          />
+                        </label>
+                        {liveProduct.image && (
+                          <button
+                            type="button"
+                            onClick={() => setImgBundar(liveProduct.image)}
+                            className="px-2.5 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-[10.5px] font-semibold text-[#8B5E3C] hover:bg-[#FAF5EE] cursor-pointer"
+                            title="Gunakan foto produk saat ini"
+                          >
+                            Foto Utama
+                          </button>
+                        )}
+                        {imgBundar && (
+                          <button
+                            type="button"
+                            onClick={() => setImgBundar('')}
+                            className="px-2 py-1 rounded-xl text-[10px] text-red-500 hover:bg-red-50 cursor-pointer"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={imgBundar}
+                        onChange={(e) => setImgBundar(e.target.value)}
+                        placeholder="Atau tempel URL gambar Toples Bundar..."
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Toples Persegi */}
+                <div className="p-3 bg-white rounded-2xl border border-[#E8DACB] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-[#3D2314]">5. Toples Persegi (500 gr)</p>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#EAD1B6] text-[#4A2810]">
+                      Toples Persegi
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#FAF5EE] border border-[#E8DACB] shrink-0">
+                      {imgPersegi ? (
+                        <img
+                          src={imgPersegi}
+                          alt="Toples Persegi"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              DEFAULT_PACKAGING_IMAGES.persegi;
+                          }}
+                        />
+                      ) : (
+                        <img
+                          src={liveProduct.image || DEFAULT_PACKAGING_IMAGES.persegi}
+                          alt="Toples Persegi Fallback"
+                          className="w-full h-full object-cover opacity-60"
+                        />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <label className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] font-semibold text-[#4A2810] cursor-pointer hover:bg-[#F3E8DA]">
+                          {isCompressingImg ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                          <span>Upload Foto</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleUploadPkgImage('persegi', e)}
+                            className="hidden"
+                            disabled={isCompressingImg}
+                          />
+                        </label>
+                        {liveProduct.image && (
+                          <button
+                            type="button"
+                            onClick={() => setImgPersegi(liveProduct.image)}
+                            className="px-2.5 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-[10.5px] font-semibold text-[#8B5E3C] hover:bg-[#FAF5EE] cursor-pointer"
+                            title="Gunakan foto produk saat ini"
+                          >
+                            Foto Utama
+                          </button>
+                        )}
+                        {imgPersegi && (
+                          <button
+                            type="button"
+                            onClick={() => setImgPersegi('')}
+                            className="px-2 py-1 rounded-xl text-[10px] text-red-500 hover:bg-red-50 cursor-pointer"
+                          >
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={imgPersegi}
+                        onChange={(e) => setImgPersegi(e.target.value)}
+                        placeholder="Atau tempel URL gambar Toples Persegi..."
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[10.5px] text-[#3D2314] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 6. Toples Kaca Mewah */}
+                <div className="p-3 bg-white rounded-2xl border border-[#E8DACB] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-[#3D2314]">6. Toples Kaca Mewah (150 gr)</p>
                     <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#EAD1B6] text-[#4A2810]">
                       Toples Kaca
                     </span>
@@ -1403,7 +1571,7 @@ export const DetailProdukModal: React.FC = () => {
           </div>
         )}
 
-        {/* ================= MODAL 3: EDIT HARGA 8 KEMASAN ================= */}
+        {/* ================= MODAL 3: EDIT HARGA 10 KEMASAN ================= */}
         {isEditingPricesModalOpen && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-fade-in">
             <div className="w-full max-w-lg max-h-[90vh] bg-[#FAF5EE] rounded-3xl border border-[#E8DACB] p-5 shadow-2xl flex flex-col overflow-hidden">
@@ -1417,7 +1585,7 @@ export const DetailProdukModal: React.FC = () => {
                       Edit Harga: {liveProduct.name}
                     </h3>
                     <p className="text-[10px] text-[#8C7A6B]">
-                      Atur harga khusus untuk 8 pilihan kemasan produk ini
+                      Atur harga khusus untuk 10 pilihan kemasan produk ini
                     </p>
                   </div>
                 </div>
@@ -1516,10 +1684,27 @@ export const DetailProdukModal: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 5. Toples Mika Ulir 350 gr */}
+                  {/* 5. Toples bundar 300 gr */}
                   <div className="p-2.5 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-[#3D2314] leading-tight">5. Toples Mika Ulir 350 gr</p>
+                      <p className="text-[11px] font-bold text-[#3D2314] leading-tight">5. Toples bundar 300 gr</p>
+                      <p className="text-[9.5px] text-[#8C7A6B]">Toples bundar bening cantik meja tamu</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] font-bold text-[#8C7A6B]">Rp</span>
+                      <input
+                        type="number"
+                        value={priceBundar300}
+                        onChange={(e) => setPriceBundar300(Number(e.target.value))}
+                        className="w-24 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] text-right focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 6. Toples Mika Ulir 350 gr */}
+                  <div className="p-2.5 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold text-[#3D2314] leading-tight">6. Toples Mika Ulir 350 gr</p>
                       <p className="text-[9.5px] text-[#8C7A6B]">Toples mika ulir besar meja tamu</p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -1533,10 +1718,10 @@ export const DetailProdukModal: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 6. Toples Mika Ulir 500 gr */}
+                  {/* 7. Toples Mika Ulir 500 gr */}
                   <div className="p-2.5 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-[#3D2314] leading-tight">6. Toples Mika Ulir 500 gr</p>
+                      <p className="text-[11px] font-bold text-[#3D2314] leading-tight">7. Toples Mika Ulir 500 gr</p>
                       <p className="text-[9.5px] text-[#8C7A6B]">Toples mika ulir setengah kilo</p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -1550,10 +1735,27 @@ export const DetailProdukModal: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 7. Toples Mika Ulir 1000 gr */}
+                  {/* 8. Toples Persegi 500 gr */}
                   <div className="p-2.5 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-[#3D2314] leading-tight">7. Toples Mika Ulir 1000 gr</p>
+                      <p className="text-[11px] font-bold text-[#3D2314] leading-tight">8. Toples Persegi 500 gr</p>
+                      <p className="text-[9.5px] text-[#8C7A6B]">Toples persegi hardtop kotak klasik</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] font-bold text-[#8C7A6B]">Rp</span>
+                      <input
+                        type="number"
+                        value={pricePersegi500}
+                        onChange={(e) => setPricePersegi500(Number(e.target.value))}
+                        className="w-24 px-2 py-1 rounded-lg bg-[#FAF5EE] border border-[#E8DACB] text-xs font-bold text-[#3D2314] text-right focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 9. Toples Mika Ulir 1000 gr */}
+                  <div className="p-2.5 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold text-[#3D2314] leading-tight">9. Toples Mika Ulir 1000 gr</p>
                       <p className="text-[9.5px] text-[#8C7A6B]">Toples mika ulir jumbo 1 kg</p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -1567,10 +1769,10 @@ export const DetailProdukModal: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 8. Toples Kaca Mewah 150 gr */}
+                  {/* 10. Toples Kaca Mewah 150 gr */}
                   <div className="p-2.5 bg-white rounded-xl border border-[#E8DACB] flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-[#3D2314] leading-tight">8. Toples Kaca Mewah 150 gr</p>
+                      <p className="text-[11px] font-bold text-[#3D2314] leading-tight">10. Toples Kaca Mewah 150 gr</p>
                       <p className="text-[9.5px] text-[#8C7A6B]">Jar kaca eksklusif kedap udara kado/hampers</p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">

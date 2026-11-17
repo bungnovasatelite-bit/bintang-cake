@@ -62,6 +62,8 @@ export interface StoreConfig {
     ekopack?: string;
     mika?: string;
     kaca?: string;
+    bundar?: string;
+    persegi?: string;
   };
   // Pengaturan Pembayaran (QRIS & Transfer Bank)
   qrisImage?: string;
@@ -119,6 +121,8 @@ export const DEFAULT_STORE_CONFIG: StoreConfig = {
     minipack: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=400&q=80',
     ekopack: 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=400&q=80',
     mika: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80',
+    bundar: 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=400&q=80',
+    persegi: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80',
     kaca: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80',
   },
   // Pengaturan Pembayaran
@@ -184,9 +188,11 @@ function autoMigratePackagingImages(
   const isCustomMinipack = Boolean(cfgPkg.minipack && !cfgPkg.minipack.includes('unsplash.com'));
   const isCustomEkopack = Boolean(cfgPkg.ekopack && !cfgPkg.ekopack.includes('unsplash.com'));
   const isCustomMika = Boolean(cfgPkg.mika && !cfgPkg.mika.includes('unsplash.com'));
+  const isCustomBundar = Boolean(cfgPkg.bundar && !cfgPkg.bundar.includes('unsplash.com'));
+  const isCustomPersegi = Boolean(cfgPkg.persegi && !cfgPkg.persegi.includes('unsplash.com'));
   const isCustomKaca = Boolean(cfgPkg.kaca && !cfgPkg.kaca.includes('unsplash.com'));
 
-  if (isCustomMinipack || isCustomEkopack || isCustomMika || isCustomKaca) {
+  if (isCustomMinipack || isCustomEkopack || isCustomMika || isCustomBundar || isCustomPersegi || isCustomKaca) {
     const saguIndex = productsList.findIndex((p) => p.name.toLowerCase().includes('sagu keju'));
     let updatedProducts = [...productsList];
     if (saguIndex !== -1 && !updatedProducts[saguIndex].packagingImages) {
@@ -196,6 +202,8 @@ function autoMigratePackagingImages(
           minipack: isCustomMinipack ? cfgPkg.minipack : undefined,
           ekopack: isCustomEkopack ? cfgPkg.ekopack : undefined,
           mika: isCustomMika ? cfgPkg.mika : undefined,
+          bundar: isCustomBundar ? cfgPkg.bundar : undefined,
+          persegi: isCustomPersegi ? cfgPkg.persegi : undefined,
           kaca: isCustomKaca ? cfgPkg.kaca : undefined,
         },
       };

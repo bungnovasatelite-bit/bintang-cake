@@ -19,6 +19,8 @@ export interface Product {
     ekopack?: string;
     mika?: string;
     kaca?: string;
+    bundar?: string;
+    persegi?: string;
     hamper1?: string;
     hamper2?: string;
     hamper3?: string;

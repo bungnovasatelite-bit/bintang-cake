@@ -1,7 +1,7 @@
 export interface CookiePackageOption {
   id: string;
   name: string;
-  styleId: 'minipack' | 'ekopack' | 'mika' | 'kaca';
+  styleId: 'minipack' | 'ekopack' | 'mika' | 'bundar' | 'persegi' | 'kaca';
   styleName: string;
   weight: string;
   portion: string;
@@ -11,7 +11,7 @@ export interface CookiePackageOption {
 }
 
 export interface PackagingStyleShowcase {
-  id: 'minipack' | 'ekopack' | 'mika' | 'kaca';
+  id: 'minipack' | 'ekopack' | 'mika' | 'bundar' | 'persegi' | 'kaca';
   title: string;
   subtitle: string;
   weights: string;
@@ -24,12 +24,14 @@ export const DEFAULT_PACKAGING_IMAGES = {
   minipack: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=400&q=80',
   ekopack: 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=400&q=80',
   mika: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80',
+  bundar: 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=400&q=80',
+  persegi: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80',
   kaca: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80',
 };
 
-// 4 Gaya Kemasan Utama untuk Galeri Kemasan
+// 6 Gaya Kemasan Utama untuk Galeri Kemasan
 export function getPackagingStylesShowcase(
-  packagingImages?: { minipack?: string; ekopack?: string; mika?: string; kaca?: string },
+  packagingImages?: { minipack?: string; ekopack?: string; mika?: string; bundar?: string; persegi?: string; kaca?: string },
   productImageFallback?: string
 ): PackagingStyleShowcase[] {
   const fallback = productImageFallback || DEFAULT_PACKAGING_IMAGES.mika;
@@ -37,6 +39,8 @@ export function getPackagingStylesShowcase(
     minipack: packagingImages?.minipack || DEFAULT_PACKAGING_IMAGES.minipack,
     ekopack: packagingImages?.ekopack || DEFAULT_PACKAGING_IMAGES.ekopack,
     mika: packagingImages?.mika || fallback,
+    bundar: packagingImages?.bundar || DEFAULT_PACKAGING_IMAGES.bundar || fallback,
+    persegi: packagingImages?.persegi || DEFAULT_PACKAGING_IMAGES.persegi || fallback,
     kaca: packagingImages?.kaca || DEFAULT_PACKAGING_IMAGES.kaca,
   };
 
@@ -69,6 +73,24 @@ export function getPackagingStylesShowcase(
       description: 'Toples mika ulir tebal kedap udara dengan segel emas khas Bintang Cake, menjaga kerenyahan Wijsman lebih tahan lama.'
     },
     {
+      id: 'bundar',
+      title: 'Toples Bundar',
+      subtitle: 'Toples Bulat Bening',
+      weights: '300 gr',
+      badge: 'Favorit Meja',
+      image: imgs.bundar || fallback,
+      description: 'Toples bundar transparan tebal dengan seal kedap udara, sangat cantik untuk suguhan meja tamu.'
+    },
+    {
+      id: 'persegi',
+      title: 'Toples Persegi',
+      subtitle: 'Hardtop Box Kotak',
+      weights: '500 gr',
+      badge: 'Hardtop Mewah',
+      image: imgs.persegi || fallback,
+      description: 'Toples persegi kristal hardtop tebal dengan segel pita, kemasan klasik khas hari raya dan bingkisan spesial.'
+    },
+    {
       id: 'kaca',
       title: 'Toples Kaca Mewah',
       subtitle: 'Jar Kaca Kedap Udara',
@@ -81,13 +103,13 @@ export function getPackagingStylesShowcase(
 }
 
 /**
- * Menghasilkan 8 pilihan kemasan & harga untuk kategori Cookies & Lidah Kucing.
+ * Menghasilkan 10 pilihan kemasan & harga untuk kategori Cookies & Lidah Kucing.
  * Mengutamakan harga & gambar khusus produk (per-product packaging images) jika telah diatur.
  */
 export function getCookiePackageOptions(
   basePrice: number,
   customSizes?: { name: string; portion?: string; price: number; image?: string }[],
-  packagingImages?: { minipack?: string; ekopack?: string; mika?: string; kaca?: string },
+  packagingImages?: { minipack?: string; ekopack?: string; mika?: string; bundar?: string; persegi?: string; kaca?: string },
   productImageFallback?: string
 ): CookiePackageOption[] {
   const round1000 = (val: number) => Math.round(val / 1000) * 1000;
@@ -96,6 +118,8 @@ export function getCookiePackageOptions(
     minipack: packagingImages?.minipack || DEFAULT_PACKAGING_IMAGES.minipack,
     ekopack: packagingImages?.ekopack || DEFAULT_PACKAGING_IMAGES.ekopack,
     mika: packagingImages?.mika || fallback,
+    bundar: packagingImages?.bundar || DEFAULT_PACKAGING_IMAGES.bundar || fallback,
+    persegi: packagingImages?.persegi || DEFAULT_PACKAGING_IMAGES.persegi || fallback,
     kaca: packagingImages?.kaca || DEFAULT_PACKAGING_IMAGES.kaca,
   };
 
@@ -159,6 +183,17 @@ export function getCookiePackageOptions(
       image: getCustomImage('Toples Mika Ulir 250 gr', imgs.mika)
     },
     {
+      id: 'bundar-300',
+      name: 'Toples bundar 300 gr',
+      styleId: 'bundar',
+      styleName: 'Toples Bundar',
+      weight: '300 gr',
+      portion: 'Toples bundar bening cantik • Suguhan meja favorit',
+      price: getCustomPrice('Toples bundar 300 gr', round1000(basePrice * 1.45)),
+      badge: 'Toples Bundar',
+      image: getCustomImage('Toples bundar 300 gr', imgs.bundar)
+    },
+    {
       id: 'mika-350',
       name: 'Toples Mika Ulir 350 gr',
       styleId: 'mika',
@@ -179,6 +214,17 @@ export function getCookiePackageOptions(
       price: getCustomPrice('Toples Mika Ulir 500 gr', round1000(basePrice * 2.33)),
       badge: 'Setengah Kilo',
       image: getCustomImage('Toples Mika Ulir 500 gr', imgs.mika)
+    },
+    {
+      id: 'persegi-500',
+      name: 'Toples Persegi 500 gr',
+      styleId: 'persegi',
+      styleName: 'Toples Persegi',
+      weight: '500 gr',
+      portion: 'Toples persegi hardtop kotak • Pilihan klasik eksklusif',
+      price: getCustomPrice('Toples Persegi 500 gr', round1000(basePrice * 2.33)),
+      badge: 'Toples Persegi',
+      image: getCustomImage('Toples Persegi 500 gr', imgs.persegi)
     },
     {
       id: 'mika-1000',
