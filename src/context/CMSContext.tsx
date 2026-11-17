@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { Product } from '../types';
+import { Product, HeroSlide } from '../types';
 import { INITIAL_PRODUCTS } from '../data/mockData';
 import {
   supabase,
@@ -35,6 +35,7 @@ export interface StoreConfig {
   heroTitle: string;
   heroSubtitle: string;
   heroImage: string;
+  heroSlides?: HeroSlide[];
   // Promo / Flash Sale
   isPromoActive: boolean;
   promoTag: string;
@@ -72,12 +73,62 @@ export interface StoreConfig {
   bankAccount: string;
 }
 
+export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
+  {
+    id: 'slide-1',
+    image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1200&q=80',
+    tag: 'PARTNER TO ENJOY YOUR DAY',
+    title: 'Bintang Cake & Cookies',
+    subtitle: 'Rayakan setiap kebersamaan berharga dengan kreasi kue lembut dan kue kering mentega Wijsman premium.',
+  },
+  {
+    id: 'slide-2',
+    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1200&q=80',
+    tag: 'PARCEL & HAMPERS MEWAH',
+    title: 'Bingkisan Spesial Hari Istimewa',
+    subtitle: 'Hampers eksklusif dengan pilihan hardbox mewah, kartu ucapan kustom, dan aneka toples cookies favorit.',
+  },
+  {
+    id: 'slide-3',
+    image: 'https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=1200&q=80',
+    tag: 'FRESHLY BAKED EVERYDAY',
+    title: 'Artisan Cake & Vanilla Cheese',
+    subtitle: 'Tekstur lembut berpadu keju creamy dan aroma vanilla wangi tanpa bahan pengawet.',
+  },
+  {
+    id: 'slide-4',
+    image: 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=1200&q=80',
+    tag: 'RESEP WARISAN OTENTIK',
+    title: 'Lidah Kucing Keju Wijsman',
+    subtitle: 'Renyah garing keju Edam Belanda dan mentega Wijsman murni yang meleleh di lidah.',
+  },
+  {
+    id: 'slide-5',
+    image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=1200&q=80',
+    tag: 'FUDGY CHOCOLATE SERIES',
+    title: 'Fudgy Brownies Mix Topping',
+    subtitle: 'Cokelat pekat Belgia dengan limpahan almond, parutan keju, dan lotus biscoff yang menggugah selera.',
+  },
+];
+
+export const ensure5HeroSlides = (slides?: HeroSlide[]): HeroSlide[] => {
+  if (!slides || slides.length === 0) return DEFAULT_HERO_SLIDES;
+  const res = [...slides];
+  for (let i = 0; i < 5; i++) {
+    if (!res[i]) {
+      res[i] = DEFAULT_HERO_SLIDES[i];
+    }
+  }
+  return res.slice(0, 5);
+};
+
 export const DEFAULT_STORE_CONFIG: StoreConfig = {
   logoImage: '',
   heroTag: 'PARTNER TO ENJOY YOUR DAY',
   heroTitle: 'Bintang Cake',
   heroSubtitle: 'Rayakan setiap kebersamaan berharga dengan kreasi kue lembut dan kue kering mentega Wijsman premium.',
   heroImage: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
+  heroSlides: DEFAULT_HERO_SLIDES,
   // Promo / Flash Sale
   isPromoActive: true,
   promoTag: '⚡ FLASH SALE • Berakhir 2 hari lagi',
@@ -256,6 +307,7 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         rawConfig = {
           ...DEFAULT_STORE_CONFIG,
           ...parsed,
+          heroSlides: ensure5HeroSlides(parsed.heroSlides),
           boutiqueStatus: parsed.boutiqueStatus?.replace(/butik/gi, 'Toko') || DEFAULT_STORE_CONFIG.boutiqueStatus,
           packagingImages: {
             ...DEFAULT_STORE_CONFIG.packagingImages,
@@ -329,7 +381,11 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const cloudData = await fetchCloudStoreData();
         if (cloudData && cloudData.products && cloudData.products.length > 0) {
           if (isMounted) {
-            const rawConfig = { ...DEFAULT_STORE_CONFIG, ...cloudData.storeConfig };
+            const rawConfig = {
+              ...DEFAULT_STORE_CONFIG,
+              ...cloudData.storeConfig,
+              heroSlides: ensure5HeroSlides(cloudData.storeConfig?.heroSlides),
+            };
             const migrated = autoMigratePackagingImages(cloudData.products, rawConfig);
             setProducts(migrated.products);
             setStoreConfig(migrated.storeConfig);

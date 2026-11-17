@@ -42,8 +42,8 @@ import {
   ChevronsUp,
   ChevronsDown,
 } from 'lucide-react';
-import { useCMS } from '../../context/CMSContext';
-import { Product, ProductCategory } from '../../types';
+import { useCMS, DEFAULT_HERO_SLIDES, ensure5HeroSlides } from '../../context/CMSContext';
+import { Product, ProductCategory, HeroSlide } from '../../types';
 import { compressImage } from '../../utils/imageCompressor';
 import { testSupabaseConnection, SupabaseHealthCheckResult } from '../../lib/supabase';
 import { BrandLogo } from '../icons/BrandLogo';
@@ -162,6 +162,10 @@ export const CMSModal: React.FC = () => {
   const [heroTitle, setHeroTitle] = useState(storeConfig.heroTitle);
   const [heroSubtitle, setHeroSubtitle] = useState(storeConfig.heroSubtitle);
   const [heroImage, setHeroImage] = useState(storeConfig.heroImage);
+  const [cmsHeroSlides, setCmsHeroSlides] = useState<HeroSlide[]>(() =>
+    ensure5HeroSlides(storeConfig.heroSlides || DEFAULT_HERO_SLIDES)
+  );
+  const [selectedSlideTab, setSelectedSlideTab] = useState<number>(0);
 
   // Promo & Flash Sale state
   const [isPromoActive, setIsPromoActive] = useState(storeConfig.isPromoActive !== false);
@@ -295,6 +299,7 @@ ON CONFLICT (id) DO NOTHING;
       setHeroTitle(storeConfig.heroTitle);
       setHeroSubtitle(storeConfig.heroSubtitle);
       setHeroImage(storeConfig.heroImage);
+      setCmsHeroSlides(ensure5HeroSlides(storeConfig.heroSlides || DEFAULT_HERO_SLIDES));
       setIsPromoActive(storeConfig.isPromoActive !== false);
       setPromoTag(storeConfig.promoTag || '⚡ FLASH SALE • Berakhir 2 hari lagi');
       setPromoTitle(storeConfig.promoTitle || 'Dapatkan Souvenir Cantik');
@@ -547,21 +552,52 @@ ON CONFLICT (id) DO NOTHING;
     }
   };
 
-  // Upload Foto Hero
-  const handleHeroImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload Foto untuk Slide Tertentu (0 - 4)
+  const handleSlideImageUpload = async (slideIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       try {
         setIsCompressingImg(true);
         const compressed = await compressImage(file, 1200, 800, 0.80);
-        setHeroImage(compressed);
-        await updateStoreConfig({ heroImage: compressed });
+        const updatedSlides = [...cmsHeroSlides];
+        updatedSlides[slideIndex] = {
+          ...updatedSlides[slideIndex],
+          image: compressed,
+        };
+        setCmsHeroSlides(updatedSlides);
+        if (slideIndex === 0) setHeroImage(compressed);
+        await updateStoreConfig({ heroSlides: updatedSlides });
       } catch (err) {
-        console.error('Gagal upload foto hero:', err);
+        console.error('Gagal upload gambar slide:', err);
       } finally {
         setIsCompressingImg(false);
       }
     }
+  };
+
+  // Hapus / Reset Foto Slide Tertentu (0 - 4)
+  const handleDeleteSlideImage = async (slideIndex: number) => {
+    const fallback = DEFAULT_HERO_SLIDES[slideIndex]?.image || '';
+    const updatedSlides = [...cmsHeroSlides];
+    updatedSlides[slideIndex] = {
+      ...updatedSlides[slideIndex],
+      image: fallback,
+    };
+    setCmsHeroSlides(updatedSlides);
+    if (slideIndex === 0) setHeroImage(fallback);
+    await updateStoreConfig({ heroSlides: updatedSlides });
+  };
+
+  // Update Field Teks Slide Tertentu
+  const handleUpdateSlideField = (slideIndex: number, field: keyof HeroSlide, value: string) => {
+    setCmsHeroSlides((prev) => {
+      const updated = [...prev];
+      updated[slideIndex] = {
+        ...updated[slideIndex],
+        [field]: value,
+      };
+      return updated;
+    });
   };
 
   // Upload Barcode QRIS
@@ -713,10 +749,11 @@ ON CONFLICT (id) DO NOTHING;
     e.preventDefault();
     await updateStoreConfig({
       logoImage,
-      heroTag,
-      heroTitle,
-      heroSubtitle,
-      heroImage,
+      heroTag: cmsHeroSlides[0]?.tag || heroTag,
+      heroTitle: cmsHeroSlides[0]?.title || heroTitle,
+      heroSubtitle: cmsHeroSlides[0]?.subtitle || heroSubtitle,
+      heroImage: cmsHeroSlides[0]?.image || heroImage,
+      heroSlides: cmsHeroSlides,
     });
   };
 
@@ -2912,104 +2949,162 @@ ON CONFLICT (id) DO NOTHING;
                     </div>
                   </div>
 
-                  {/* SEKSI 2: HERO BANNER BERANDA */}
-                  <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-3">
-                    <h4 className="font-serif font-bold text-xs text-[#3D2314] flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-[#8B5E3C]" />
-                      Hero Banner Beranda
-                    </h4>
-
-                    {/* Pratinjau Tampilan Hero Langsung */}
-                    <div className="relative rounded-2xl overflow-hidden h-32 bg-[#3D2314] text-white p-3 flex flex-col justify-end shadow-xs border border-[#E8DACB]">
-                      {heroImage && (
-                        <img
-                          src={heroImage}
-                          alt="Hero Preview"
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#201107] via-[#201107]/60 to-black/25" />
-                      <div className="relative z-10">
-                        <span className="text-[8.5px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-xs text-[#FAF5EE]">
-                          {heroTag || 'TAG HERO'}
-                        </span>
-                        <h5 className="font-serif font-bold text-sm leading-tight mt-1 text-[#FAF5EE]">
-                          {heroTitle || 'Judul Hero'}
-                        </h5>
-                        <p className="text-[9.5px] text-[#E6D3BE] line-clamp-1 mt-0.5">
-                          {heroSubtitle || 'Deskripsi singkat hero banner...'}
+                  {/* SEKSI 2: PENGATURAN SLIDER HERO (5 GAMBAR BERPUTAR) */}
+                  <div className="p-4 bg-white rounded-3xl border border-[#E8DACB] space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-serif font-bold text-xs text-[#3D2314] flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-[#8B5E3C]" />
+                          Slider Hero Beranda (5 Gambar Berputar)
+                        </h4>
+                        <p className="text-[10px] text-[#8C7A6B]">
+                          Hero di bagian paling atas berputar otomatis menampilkan 5 slide. Pilih tab slide untuk upload, ganti, atau hapus gambar.
                         </p>
                       </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EAD1B6]/40 text-[#4A2810] border border-[#D4A373]/30">
+                        5 Slides
+                      </span>
                     </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Foto Hero Banner
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <label className="px-3 py-1.5 rounded-xl bg-[#4A2810] text-white text-xs font-semibold cursor-pointer hover:bg-[#341A08] shrink-0 flex items-center gap-1 transition-colors">
-                          {isCompressingImg ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Upload className="w-3.5 h-3.5" />
-                          )}
-                          <span>Ganti Foto Hero</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleHeroImageFileUpload}
-                            className="hidden"
-                            disabled={isCompressingImg}
-                          />
-                        </label>
-                        <input
-                          type="text"
-                          value={heroImage}
-                          onChange={(e) => setHeroImage(e.target.value)}
-                          placeholder="Atau tempel URL gambar foto hero..."
-                          className="flex-1 px-3 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-[11px] text-[#3D2314] focus:outline-none"
-                        />
-                      </div>
+                    {/* Selector 5 Slide (Pill Buttons) */}
+                    <div className="flex items-center gap-1.5 p-1 bg-[#FAF5EE] rounded-2xl border border-[#E8DACB] overflow-x-auto">
+                      {[0, 1, 2, 3, 4].map((index) => {
+                        const isCurrent = selectedSlideTab === index;
+                        return (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => setSelectedSlideTab(index)}
+                            className={`flex-1 min-w-[68px] py-1.5 px-2 rounded-xl text-center text-[10.5px] font-bold transition-all cursor-pointer ${
+                              isCurrent
+                                ? 'bg-[#4A2810] text-[#FAF5EE] shadow-sm'
+                                : 'text-[#8C7A6B] hover:text-[#4A2810] hover:bg-[#FAF5EE]/80'
+                            }`}
+                          >
+                            Slide {index + 1}
+                          </button>
+                        );
+                      })}
                     </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Tag Badge Hero
-                      </label>
-                      <input
-                        type="text"
-                        value={heroTag}
-                        onChange={(e) => setHeroTag(e.target.value)}
-                        placeholder="Contoh: PARTNER TO ENJOY YOUR DAY"
-                        className="w-full px-3 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none"
-                      />
-                    </div>
+                    {/* Active Slide Editor */}
+                    {(() => {
+                      const slide = cmsHeroSlides[selectedSlideTab] || DEFAULT_HERO_SLIDES[selectedSlideTab];
+                      return (
+                        <div className="space-y-3 p-3 bg-[#FAF5EE]/60 rounded-2xl border border-[#E8DACB]">
+                          {/* Pratinjau Tampilan Slide Langsung */}
+                          <div className="relative rounded-2xl overflow-hidden h-36 bg-[#3D2314] text-white p-3.5 flex flex-col justify-end shadow-xs border border-[#E8DACB]">
+                            {slide.image && (
+                              <img
+                                src={slide.image}
+                                alt={`Hero Slide ${selectedSlideTab + 1}`}
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#201107] via-[#201107]/60 to-black/30" />
+                            <div className="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-[9px] font-mono font-bold text-amber-200 border border-white/20">
+                              Slide {selectedSlideTab + 1} / 5
+                            </div>
+                            <div className="relative z-10">
+                              <span className="text-[8.5px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-xs text-[#FAF5EE]">
+                                {slide.tag || `SLIDE ${selectedSlideTab + 1}`}
+                              </span>
+                              <h5 className="font-serif font-bold text-sm leading-tight mt-1 text-[#FAF5EE]">
+                                {slide.title || `Judul Slide ${selectedSlideTab + 1}`}
+                              </h5>
+                              <p className="text-[9.5px] text-[#E6D3BE] line-clamp-1 mt-0.5">
+                                {slide.subtitle || 'Deskripsi singkat slide hero...'}
+                              </p>
+                            </div>
+                          </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Judul Headline Hero
-                      </label>
-                      <input
-                        type="text"
-                        value={heroTitle}
-                        onChange={(e) => setHeroTitle(e.target.value)}
-                        placeholder="Contoh: Bintang Cake"
-                        className="w-full px-3 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none"
-                      />
-                    </div>
+                          {/* Foto Control: Upload & Hapus/Reset */}
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="text-[10.5px] font-bold text-[#4A2810]">
+                                Foto Slide {selectedSlideTab + 1}
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSlideImage(selectedSlideTab)}
+                                className="text-[10px] text-red-600 hover:text-red-700 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                                title="Hapus foto upload dan kembalikan ke foto default"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Hapus / Reset Foto</span>
+                              </button>
+                            </div>
 
-                    <div>
-                      <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
-                        Deskripsi Hero
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={heroSubtitle}
-                        onChange={(e) => setHeroSubtitle(e.target.value)}
-                        placeholder="Deskripsi cita rasa kue..."
-                        className="w-full px-3 py-1.5 rounded-xl bg-[#FAF5EE] border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none resize-none"
-                      />
-                    </div>
+                            <div className="flex items-center gap-2">
+                              <label className="px-3 py-1.5 rounded-xl bg-[#4A2810] text-white text-xs font-semibold cursor-pointer hover:bg-[#341A08] shrink-0 flex items-center gap-1.5 transition-colors shadow-xs">
+                                {isCompressingImg ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Upload className="w-3.5 h-3.5" />
+                                )}
+                                <span>Upload / Ganti Foto</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handleSlideImageUpload(selectedSlideTab, e)}
+                                  className="hidden"
+                                  disabled={isCompressingImg}
+                                />
+                              </label>
+                              <input
+                                type="text"
+                                value={slide.image || ''}
+                                onChange={(e) => handleUpdateSlideField(selectedSlideTab, 'image', e.target.value)}
+                                placeholder="Atau tempel URL gambar langsung..."
+                                className="flex-1 px-3 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-[11px] text-[#3D2314] focus:outline-none focus:border-[#4A2810]"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Input Tag */}
+                          <div>
+                            <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                              Tag / Badge Slide
+                            </label>
+                            <input
+                              type="text"
+                              value={slide.tag || ''}
+                              onChange={(e) => handleUpdateSlideField(selectedSlideTab, 'tag', e.target.value)}
+                              placeholder="Contoh: BEST SELLER / PROMO SPESIAL"
+                              className="w-full px-3 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none focus:border-[#4A2810]"
+                            />
+                          </div>
+
+                          {/* Judul Headline Slide */}
+                          <div>
+                            <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                              Judul Headline Slide
+                            </label>
+                            <input
+                              type="text"
+                              value={slide.title || ''}
+                              onChange={(e) => handleUpdateSlideField(selectedSlideTab, 'title', e.target.value)}
+                              placeholder="Contoh: Bintang Cake"
+                              className="w-full px-3 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none focus:border-[#4A2810]"
+                            />
+                          </div>
+
+                          {/* Deskripsi Hero */}
+                          <div>
+                            <label className="block text-[10.5px] font-bold text-[#4A2810] mb-1">
+                              Deskripsi Slide
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={slide.subtitle || ''}
+                              onChange={(e) => handleUpdateSlideField(selectedSlideTab, 'subtitle', e.target.value)}
+                              placeholder="Deskripsi cita rasa kue..."
+                              className="w-full px-3 py-1.5 rounded-xl bg-white border border-[#E8DACB] text-xs font-medium text-[#3D2314] focus:outline-none focus:border-[#4A2810] resize-none"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <button
@@ -3017,7 +3112,7 @@ ON CONFLICT (id) DO NOTHING;
                     className="w-full py-3 rounded-2xl bg-[#4A2810] text-white font-bold text-xs shadow-md hover:bg-[#341A08] transition-all cursor-pointer flex items-center justify-center gap-1.5"
                   >
                     <Check className="w-4 h-4" />
-                    <span>Simpan Perubahan Logo &amp; Hero Banner</span>
+                    <span>Simpan Perubahan Logo &amp; Slider Hero (5 Gambar)</span>
                   </button>
                 </form>
               )}

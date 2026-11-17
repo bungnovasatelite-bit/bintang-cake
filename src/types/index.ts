@@ -47,6 +47,14 @@ export interface CartItem {
   note?: string;
 }
 
+export interface HeroSlide {
+  id: string;
+  image: string;
+  tag?: string;
+  title?: string;
+  subtitle?: string;
+}
+
 export interface UserProfile {
   name: string;
   phone: string;
