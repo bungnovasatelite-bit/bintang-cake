@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Plus, Pencil } from 'lucide-react';
+import { Star, Plus, Pencil, Package } from 'lucide-react';
 import { Product } from '../../types';
 import { Badge } from './Badge';
 import { useCart } from '../../context/CartContext';
@@ -60,13 +60,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     >
       <div>
         {/* Product Image Container */}
-        <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-[#F5EFE6] mb-2.5">
-          <img
-            src={product.image}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
+        <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-[#F5EFE6] mb-2.5 flex items-center justify-center">
+          {product.image && !product.image.includes('unsplash.com') ? (
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center p-3 text-center text-[#8C7A6B]">
+              <Package className="w-9 h-9 stroke-[1.5] text-[#CBB296] mb-1" />
+              <span className="text-[10px] font-bold text-[#A89078] line-clamp-1">
+                {product.name}
+              </span>
+            </div>
+          )}
 
           {/* Badge at top left */}
           {product.badge && (

@@ -21,12 +21,12 @@ export interface PackagingStyleShowcase {
 }
 
 export const DEFAULT_PACKAGING_IMAGES = {
-  minipack: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=400&q=80',
-  ekopack: 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=400&q=80',
-  mika: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80',
-  bundar: 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=400&q=80',
-  persegi: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80',
-  kaca: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80',
+  minipack: '',
+  ekopack: '',
+  mika: '',
+  bundar: '',
+  persegi: '',
+  kaca: '',
 };
 
 // 6 Gaya Kemasan Utama untuk Galeri Kemasan
@@ -34,14 +34,19 @@ export function getPackagingStylesShowcase(
   packagingImages?: { minipack?: string; ekopack?: string; mika?: string; bundar?: string; persegi?: string; kaca?: string },
   productImageFallback?: string
 ): PackagingStyleShowcase[] {
-  const fallback = productImageFallback || DEFAULT_PACKAGING_IMAGES.mika;
+  const cleanFallback = (productImageFallback && !productImageFallback.includes('unsplash.com')) ? productImageFallback : '';
+  const getImg = (custom?: string) => {
+    if (custom && !custom.includes('unsplash.com')) return custom;
+    return cleanFallback;
+  };
+
   const imgs = {
-    minipack: packagingImages?.minipack || DEFAULT_PACKAGING_IMAGES.minipack,
-    ekopack: packagingImages?.ekopack || DEFAULT_PACKAGING_IMAGES.ekopack,
-    mika: packagingImages?.mika || fallback,
-    bundar: packagingImages?.bundar || DEFAULT_PACKAGING_IMAGES.bundar || fallback,
-    persegi: packagingImages?.persegi || DEFAULT_PACKAGING_IMAGES.persegi || fallback,
-    kaca: packagingImages?.kaca || DEFAULT_PACKAGING_IMAGES.kaca,
+    minipack: getImg(packagingImages?.minipack),
+    ekopack: getImg(packagingImages?.ekopack),
+    mika: getImg(packagingImages?.mika),
+    bundar: getImg(packagingImages?.bundar),
+    persegi: getImg(packagingImages?.persegi),
+    kaca: getImg(packagingImages?.kaca),
   };
 
   return [
@@ -51,7 +56,7 @@ export function getPackagingStylesShowcase(
       subtitle: 'Pouch Mini Zipper',
       weights: '150 gr',
       badge: 'Hemat & Praktis',
-      image: imgs.minipack || fallback,
+      image: imgs.minipack,
       description: 'Kemasan pouch mini ziplock praktis, pas untuk camilan santai sendiri tanpa takut mlempem.'
     },
     {
@@ -60,7 +65,7 @@ export function getPackagingStylesShowcase(
       subtitle: 'Standing Pouch Eco',
       weights: '200 gr',
       badge: 'Ekonomis',
-      image: imgs.ekopack || fallback,
+      image: imgs.ekopack,
       description: 'Standing pouch ramah lingkungan dengan jendela transparan, harga lebih hemat isi tetap melimpah.'
     },
     {
@@ -69,7 +74,7 @@ export function getPackagingStylesShowcase(
       subtitle: 'Toples Kristal Ulir',
       weights: '200g - 1000g (5 Pilihan)',
       badge: 'Best Seller',
-      image: imgs.mika || fallback,
+      image: imgs.mika,
       description: 'Toples mika ulir tebal kedap udara dengan segel emas khas Bintang Cake, menjaga kerenyahan Wijsman lebih tahan lama.'
     },
     {
@@ -78,7 +83,7 @@ export function getPackagingStylesShowcase(
       subtitle: 'Toples Bulat Bening',
       weights: '300 gr',
       badge: 'Favorit Meja',
-      image: imgs.bundar || fallback,
+      image: imgs.bundar,
       description: 'Toples bundar transparan tebal dengan seal kedap udara, sangat cantik untuk suguhan meja tamu.'
     },
     {
@@ -87,7 +92,7 @@ export function getPackagingStylesShowcase(
       subtitle: 'Hardtop Box Kotak',
       weights: '500 gr',
       badge: 'Hardtop Mewah',
-      image: imgs.persegi || fallback,
+      image: imgs.persegi,
       description: 'Toples persegi kristal hardtop tebal dengan segel pita, kemasan klasik khas hari raya dan bingkisan spesial.'
     },
     {
@@ -96,7 +101,7 @@ export function getPackagingStylesShowcase(
       subtitle: 'Jar Kaca Kedap Udara',
       weights: '150 gr',
       badge: 'Hadiah & Hampers',
-      image: imgs.kaca || fallback,
+      image: imgs.kaca,
       description: 'Toples kaca bening tebal eksklusif dengan tutup kedap udara elegan. Sangat mewah untuk hadiah, bingkisan, dan hampers.'
     }
   ];
@@ -113,14 +118,18 @@ export function getCookiePackageOptions(
   productImageFallback?: string
 ): CookiePackageOption[] {
   const round1000 = (val: number) => Math.round(val / 1000) * 1000;
-  const fallback = productImageFallback || DEFAULT_PACKAGING_IMAGES.mika;
+  const cleanFallback = (productImageFallback && !productImageFallback.includes('unsplash.com')) ? productImageFallback : '';
+  const getImg = (custom?: string) => {
+    if (custom && !custom.includes('unsplash.com')) return custom;
+    return cleanFallback;
+  };
   const imgs = {
-    minipack: packagingImages?.minipack || DEFAULT_PACKAGING_IMAGES.minipack,
-    ekopack: packagingImages?.ekopack || DEFAULT_PACKAGING_IMAGES.ekopack,
-    mika: packagingImages?.mika || fallback,
-    bundar: packagingImages?.bundar || DEFAULT_PACKAGING_IMAGES.bundar || fallback,
-    persegi: packagingImages?.persegi || DEFAULT_PACKAGING_IMAGES.persegi || fallback,
-    kaca: packagingImages?.kaca || DEFAULT_PACKAGING_IMAGES.kaca,
+    minipack: getImg(packagingImages?.minipack),
+    ekopack: getImg(packagingImages?.ekopack),
+    mika: getImg(packagingImages?.mika),
+    bundar: getImg(packagingImages?.bundar),
+    persegi: getImg(packagingImages?.persegi),
+    kaca: getImg(packagingImages?.kaca),
   };
 
   // Helper untuk mencari harga kustom jika telah diinput oleh admin
@@ -134,7 +143,10 @@ export function getCookiePackageOptions(
   const getCustomImage = (pkgName: string, defaultImg: string): string => {
     if (!customSizes || customSizes.length === 0) return defaultImg;
     const found = customSizes.find((s) => s.name.toLowerCase().trim() === pkgName.toLowerCase().trim());
-    return found && found.image ? found.image : defaultImg;
+    if (found && found.image && !found.image.includes('unsplash.com')) {
+      return found.image;
+    }
+    return defaultImg;
   };
 
   return [
@@ -261,9 +273,9 @@ export interface HamperOption {
 }
 
 export const DEFAULT_HAMPERS_IMAGES = {
-  hamper1: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=600&q=80',
-  hamper2: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=600&q=80',
-  hamper3: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80',
+  hamper1: '',
+  hamper2: '',
+  hamper3: '',
 };
 
 export function getHamperPackageOptions(
@@ -276,11 +288,15 @@ export function getHamperPackageOptions(
   const isBingkisanA = productName.toLowerCase().includes('bingkisan a') || productName.toLowerCase().includes('spesial a');
   const isBingkisanB = productName.toLowerCase().includes('bingkisan b') || productName.toLowerCase().includes('spesial b');
 
-  const fallback = fallbackImage || DEFAULT_HAMPERS_IMAGES.hamper2;
+  const cleanFallback = (fallbackImage && !fallbackImage.includes('unsplash.com')) ? fallbackImage : '';
+  const getImg = (custom?: string) => {
+    if (custom && !custom.includes('unsplash.com')) return custom;
+    return cleanFallback;
+  };
   const imgs = {
-    hamper1: packagingImages?.hamper1 || DEFAULT_HAMPERS_IMAGES.hamper1,
-    hamper2: packagingImages?.hamper2 || DEFAULT_HAMPERS_IMAGES.hamper2,
-    hamper3: packagingImages?.hamper3 || DEFAULT_HAMPERS_IMAGES.hamper3,
+    hamper1: getImg(packagingImages?.hamper1),
+    hamper2: getImg(packagingImages?.hamper2),
+    hamper3: getImg(packagingImages?.hamper3),
   };
 
   if (customSizes && customSizes.length >= 3) {
@@ -291,7 +307,7 @@ export function getHamperPackageOptions(
         portion: customSizes[0].portion,
         price: customSizes[0].price,
         badge: customSizes[0].badge || 'Pilihan 1',
-        image: customSizes[0].image || imgs.hamper1 || fallback,
+        image: (customSizes[0].image && !customSizes[0].image.includes('unsplash.com')) ? customSizes[0].image : (imgs.hamper1 || cleanFallback),
       },
       {
         id: 'hamper-2',
@@ -299,7 +315,7 @@ export function getHamperPackageOptions(
         portion: customSizes[1].portion,
         price: customSizes[1].price,
         badge: customSizes[1].badge || 'Pilihan 2',
-        image: customSizes[1].image || imgs.hamper2 || fallback,
+        image: (customSizes[1].image && !customSizes[1].image.includes('unsplash.com')) ? customSizes[1].image : (imgs.hamper2 || cleanFallback),
       },
       {
         id: 'hamper-3',
@@ -307,7 +323,7 @@ export function getHamperPackageOptions(
         portion: customSizes[2].portion,
         price: customSizes[2].price,
         badge: customSizes[2].badge || 'Pilihan 3',
-        image: customSizes[2].image || imgs.hamper3 || fallback,
+        image: (customSizes[2].image && !customSizes[2].image.includes('unsplash.com')) ? customSizes[2].image : (imgs.hamper3 || cleanFallback),
       },
     ];
   }

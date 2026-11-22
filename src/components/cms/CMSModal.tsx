@@ -401,7 +401,7 @@ ON CONFLICT (id) DO NOTHING;
     setFormRating(5.0);
     setFormReviews('50+');
     setFormBadge('NEW ARRIVAL');
-    setFormImage('https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=600&q=80');
+    setFormImage('');
     setFormDesc('Kue lezat buatan tangan dengan bahan mentega Wijsman kualitas terbaik.');
     setFormPkgMinipack('');
     setFormPkgEkopack('');
@@ -575,17 +575,19 @@ ON CONFLICT (id) DO NOTHING;
     }
   };
 
-  // Hapus / Reset Foto Slide Tertentu (0 - 4)
+  // Hapus Foto Slide Tertentu (0 - 4)
   const handleDeleteSlideImage = async (slideIndex: number) => {
-    const fallback = DEFAULT_HERO_SLIDES[slideIndex]?.image || '';
     const updatedSlides = [...cmsHeroSlides];
     updatedSlides[slideIndex] = {
       ...updatedSlides[slideIndex],
-      image: fallback,
+      image: '',
     };
     setCmsHeroSlides(updatedSlides);
-    if (slideIndex === 0) setHeroImage(fallback);
-    await updateStoreConfig({ heroSlides: updatedSlides });
+    if (slideIndex === 0) setHeroImage('');
+    await updateStoreConfig({
+      heroSlides: updatedSlides,
+      heroImage: slideIndex === 0 ? '' : storeConfig.heroImage,
+    });
   };
 
   // Update Field Teks Slide Tertentu
@@ -2994,14 +2996,24 @@ ON CONFLICT (id) DO NOTHING;
                         <div className="space-y-3 p-3 bg-[#FAF5EE]/60 rounded-2xl border border-[#E8DACB]">
                           {/* Pratinjau Tampilan Slide Langsung */}
                           <div className="relative rounded-2xl overflow-hidden h-36 bg-[#3D2314] text-white p-3.5 flex flex-col justify-end shadow-xs border border-[#E8DACB]">
-                            {slide.image && (
+                            {slide.image && !slide.image.includes('unsplash.com') ? (
                               <img
                                 src={slide.image}
                                 alt={`Hero Slide ${selectedSlideTab + 1}`}
                                 className="absolute inset-0 w-full h-full object-cover"
                               />
+                            ) : (
+                              <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-gradient-to-br from-[#3D2314] to-[#201107] text-[#D8C7B5]">
+                                <ImageIcon className="w-8 h-8 stroke-[1.5] text-[#CBB296] mb-1 opacity-70" />
+                                <span className="text-xs font-bold text-[#EAD1B6]">
+                                  Belum Ada Foto Slide {selectedSlideTab + 1}
+                                </span>
+                                <span className="text-[10px] text-[#CBB296] mt-0.5">
+                                  Klik tombol "Upload / Ganti Foto" di bawah untuk memasang foto.
+                                </span>
+                              </div>
                             )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#201107] via-[#201107]/60 to-black/30" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#201107] via-[#201107]/60 to-black/30 pointer-events-none" />
                             <div className="absolute top-2.5 right-2.5 z-10 px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm text-[9px] font-mono font-bold text-amber-200 border border-white/20">
                               Slide {selectedSlideTab + 1} / 5
                             </div>
@@ -3018,21 +3030,23 @@ ON CONFLICT (id) DO NOTHING;
                             </div>
                           </div>
 
-                          {/* Foto Control: Upload & Hapus/Reset */}
+                          {/* Foto Control: Upload & Hapus */}
                           <div>
                             <div className="flex items-center justify-between mb-1">
                               <label className="text-[10.5px] font-bold text-[#4A2810]">
                                 Foto Slide {selectedSlideTab + 1}
                               </label>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteSlideImage(selectedSlideTab)}
-                                className="text-[10px] text-red-600 hover:text-red-700 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
-                                title="Hapus foto upload dan kembalikan ke foto default"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                                <span>Hapus / Reset Foto</span>
-                              </button>
+                              {slide.image && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSlideImage(selectedSlideTab)}
+                                  className="text-[10px] text-red-600 hover:text-red-700 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                                  title="Hapus foto slide ini"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Hapus Foto</span>
+                                </button>
+                              )}
                             </div>
 
                             <div className="flex items-center gap-2">

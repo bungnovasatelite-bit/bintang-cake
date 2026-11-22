@@ -10,7 +10,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.9,
     reviewCount: 128,
     badge: 'BEST SELLER',
-    image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Kue kering renyah dengan balutan palm sugar premium yang harum karamel alami dan gurih mentega Wijsman.'
   },
   {
@@ -22,7 +22,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.8,
     reviewCount: 94,
     badge: 'NEW ARRIVAL',
-    image: 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Kastengel gurih klasik menggunakan keju Edam tua dan taburan keju Cheddar melimpah yang dipanggang renyah keemasan.'
   },
   {
@@ -34,7 +34,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 5.0,
     reviewCount: 210,
     badge: 'BEST SELLER',
-    image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Perpaduan dark chocolate Belgia pekat dengan taburan roasted almond slice yang renyah dan tidak terlalu manis.'
   },
   {
@@ -45,7 +45,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     price: 60000,
     rating: 4.8,
     reviewCount: 88,
-    image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Fudgy brownies dengan aneka topping: almond, keju parut, choco chips, dan lotus biscoff dalam satu loyang.'
   },
   {
@@ -56,7 +56,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     price: 65000,
     rating: 5.0,
     reviewCount: 65,
-    image: 'https://images.unsplash.com/photo-1579372786545-d24232daf58c?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Puding roti panggang lembut beraroma kayu manis, kismis, dan keju dengan custard vanilla lembut.'
   },
   {
@@ -67,7 +67,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     price: 95000,
     rating: 4.9,
     reviewCount: 112,
-    image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Cookies mentega berbutir choco chip leleh melimpah, renyah di tepi dan lembut gurih di bagian tengah.'
   },
   {
@@ -79,7 +79,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 5.0,
     reviewCount: 64,
     badge: 'SPECIAL GIFT',
-    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Hampers eksklusif Bingkisan A dengan box elegan dan pita satin, berisi aneka toples cookies pilihan mentega Wijsman serta kartu ucapan istimewa.',
     sizes: [
       { name: 'Paket 2 Toples Classic', portion: '2 Toples Cookies (Nastar Wijsman & Kastengel) + Box Cantik Pita Satin', price: 195000, badge: 'Favorit' },
@@ -96,7 +96,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 5.0,
     reviewCount: 48,
     badge: 'SPECIAL GIFT',
-    image: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Paket hampers eksklusif Bingkisan B berisi kombinasi toples kue kering lezat, kartu ucapan eksklusif, dan kotak kado berpita satin mewah.',
     sizes: [
       { name: 'Paket Manis 2 Toples', portion: '2 Toples Cookies (Palm Cookies & Choco Chip Butter) + Box Pita Hias', price: 185000, badge: 'Ekonomis' },
@@ -113,7 +113,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.9,
     reviewCount: 128,
     badge: 'BEST SELLER',
-    image: 'https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Vanilla Cheese Cake merupakan kue dengan perpaduan cita rasa keju yang creamy dan aroma vanilla yang harum. Memiliki tekstur lembut, halus, dan gurih pas di setiap gigitan.',
     sizes: [
       { name: 'Diameter 16 cm', portion: 'Ideal untuk pesta intim (4–6 porsi)', price: 150000 },
@@ -130,7 +130,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 4.9,
     reviewCount: 176,
     badge: 'CUSTOM',
-    image: 'https://images.unsplash.com/photo-1562440499-64c9a111f713?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Kue ulang tahun kustom artisan dengan desain elegan, hiasan cokelat leleh, macaron, dan topper khusus sesuai permintaan.'
   },
   {
@@ -142,7 +142,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 5.0,
     reviewCount: '240+',
     badge: 'BEST SELLER',
-    image: 'https://images.unsplash.com/photo-1548848221-0c2e497ed557?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Nastar lumer di lidah dengan selai nanas madu asli yang dimasak perlahan hingga legit beraroma rempah wangi.'
   },
   {
@@ -154,7 +154,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 5.0,
     reviewCount: '680+',
     badge: 'BEST SELLER',
-    image: 'https://images.unsplash.com/photo-1621303837174-89787a7d4729?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Kue sagu keju renyah seketika meleleh di mulut dengan semerbak aroma santan sangrai dan keju panggang gurih.'
   },
   {
@@ -166,7 +166,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     rating: 5.0,
     reviewCount: '190+',
     badge: 'BEST SELLER',
-    image: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Kue lidah kucing tipis renyah dan garing dengan taburan keju Edam Belanda dan mentega Wijsman murni.'
   },
   {
@@ -177,7 +177,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     price: 375000,
     rating: 4.8,
     reviewCount: 95,
-    image: 'https://images.unsplash.com/photo-1588195538326-c5b1e9f80a1b?auto=format&fit=crop&w=600&q=80',
+    image: '',
     description: 'Lapis legit warisan resep otentik dengan puluhan lapis tipis kuning telur dan mentega Wijsman murni.'
   }
 ];

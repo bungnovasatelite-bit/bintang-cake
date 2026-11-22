@@ -76,47 +76,93 @@ export interface StoreConfig {
 export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
   {
     id: 'slide-1',
-    image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1200&q=80',
+    image: '',
     tag: 'PARTNER TO ENJOY YOUR DAY',
     title: 'Bintang Cake & Cookies',
     subtitle: 'Rayakan setiap kebersamaan berharga dengan kreasi kue lembut dan kue kering mentega Wijsman premium.',
   },
   {
     id: 'slide-2',
-    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=1200&q=80',
+    image: '',
     tag: 'PARCEL & HAMPERS MEWAH',
     title: 'Bingkisan Spesial Hari Istimewa',
     subtitle: 'Hampers eksklusif dengan pilihan hardbox mewah, kartu ucapan kustom, dan aneka toples cookies favorit.',
   },
   {
     id: 'slide-3',
-    image: 'https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=1200&q=80',
+    image: '',
     tag: 'FRESHLY BAKED EVERYDAY',
     title: 'Artisan Cake & Vanilla Cheese',
     subtitle: 'Tekstur lembut berpadu keju creamy dan aroma vanilla wangi tanpa bahan pengawet.',
   },
   {
     id: 'slide-4',
-    image: 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=1200&q=80',
+    image: '',
     tag: 'RESEP WARISAN OTENTIK',
     title: 'Lidah Kucing Keju Wijsman',
     subtitle: 'Renyah garing keju Edam Belanda dan mentega Wijsman murni yang meleleh di lidah.',
   },
   {
     id: 'slide-5',
-    image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=1200&q=80',
+    image: '',
     tag: 'FUDGY CHOCOLATE SERIES',
     title: 'Fudgy Brownies Mix Topping',
     subtitle: 'Cokelat pekat Belgia dengan limpahan almond, parutan keju, dan lotus biscoff yang menggugah selera.',
   },
 ];
 
-export const ensure5HeroSlides = (slides?: HeroSlide[]): HeroSlide[] => {
-  if (!slides || slides.length === 0) return DEFAULT_HERO_SLIDES;
+export const ensure5HeroSlides = (slides?: HeroSlide[], fallbackHeroImage?: string): HeroSlide[] => {
+  const cleanFallback = fallbackHeroImage && !fallbackHeroImage.includes('unsplash.com') ? fallbackHeroImage : '';
+  const baseSlides: HeroSlide[] = [
+    {
+      id: 'slide-1',
+      image: cleanFallback,
+      tag: 'PARTNER TO ENJOY YOUR DAY',
+      title: 'Bintang Cake & Cookies',
+      subtitle: 'Rayakan setiap kebersamaan berharga dengan kreasi kue lembut dan kue kering mentega Wijsman premium.',
+    },
+    {
+      id: 'slide-2',
+      image: '',
+      tag: 'PARCEL & HAMPERS MEWAH',
+      title: 'Bingkisan Spesial Hari Istimewa',
+      subtitle: 'Hampers eksklusif dengan pilihan hardbox mewah, kartu ucapan kustom, dan aneka toples cookies favorit.',
+    },
+    {
+      id: 'slide-3',
+      image: '',
+      tag: 'FRESHLY BAKED EVERYDAY',
+      title: 'Artisan Cake & Vanilla Cheese',
+      subtitle: 'Tekstur lembut berpadu keju creamy dan aroma vanilla wangi tanpa bahan pengawet.',
+    },
+    {
+      id: 'slide-4',
+      image: '',
+      tag: 'RESEP WARISAN OTENTIK',
+      title: 'Lidah Kucing Keju Wijsman',
+      subtitle: 'Renyah garing keju Edam Belanda dan mentega Wijsman murni yang meleleh di lidah.',
+    },
+    {
+      id: 'slide-5',
+      image: '',
+      tag: 'FUDGY CHOCOLATE SERIES',
+      title: 'Fudgy Brownies Mix Topping',
+      subtitle: 'Cokelat pekat Belgia dengan limpahan almond, parutan keju, dan lotus biscoff yang menggugah selera.',
+    },
+  ];
+
+  if (!slides || slides.length === 0) return baseSlides;
   const res = [...slides];
   for (let i = 0; i < 5; i++) {
     if (!res[i]) {
-      res[i] = DEFAULT_HERO_SLIDES[i];
+      res[i] = baseSlides[i];
+    } else {
+      const cleanImg = res[i].image && !res[i].image.includes('unsplash.com') ? res[i].image : '';
+      res[i] = {
+        ...baseSlides[i],
+        ...res[i],
+        image: cleanImg || (i === 0 ? cleanFallback : ''),
+      };
     }
   }
   return res.slice(0, 5);
@@ -127,7 +173,7 @@ export const DEFAULT_STORE_CONFIG: StoreConfig = {
   heroTag: 'PARTNER TO ENJOY YOUR DAY',
   heroTitle: 'Bintang Cake',
   heroSubtitle: 'Rayakan setiap kebersamaan berharga dengan kreasi kue lembut dan kue kering mentega Wijsman premium.',
-  heroImage: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80',
+  heroImage: '',
   heroSlides: DEFAULT_HERO_SLIDES,
   // Promo / Flash Sale
   isPromoActive: true,
@@ -167,18 +213,18 @@ export const DEFAULT_STORE_CONFIG: StoreConfig = {
       date: '08 Nov 2026'
     }
   ],
-  // Pengaturan Gambar Kemasan Default
+  // Pengaturan Gambar Kemasan Default (Bersih tanpa bawaan Unsplash)
   packagingImages: {
-    minipack: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=400&q=80',
-    ekopack: 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=400&q=80',
-    mika: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=400&q=80',
-    bundar: 'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=400&q=80',
-    persegi: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80',
-    kaca: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80',
+    minipack: '',
+    ekopack: '',
+    mika: '',
+    bundar: '',
+    persegi: '',
+    kaca: '',
   },
   // Pengaturan Pembayaran
-  qrisImage: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=400&q=80',
-  qrisCode: 'NMID: ID1020304050607 - Bintang Cake',
+  qrisImage: '',
+  qrisCode: 'NMID: ID1024344350474 - Bintang Cake & Cookies',
   bankName: 'BCA (Bank Central Asia)',
   bankAccount: '8210-9876-5432 a/n Bintang Cake',
 };
@@ -298,21 +344,27 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (savedConfig) {
       try {
         const parsed = JSON.parse(savedConfig);
-        if (parsed.packagingImages?.ekopack?.includes('photo-1607344645866-009c320c5ab8')) {
-          parsed.packagingImages.ekopack = DEFAULT_STORE_CONFIG.packagingImages?.ekopack;
-        }
         if (parsed.boutiqueStatus) {
           parsed.boutiqueStatus = parsed.boutiqueStatus.replace(/butik/gi, 'Toko');
         }
+        const cleanPackaging: Record<string, string> = {};
+        if (parsed.packagingImages) {
+          Object.entries(parsed.packagingImages).forEach(([k, v]) => {
+            if (typeof v === 'string' && !v.includes('unsplash.com')) {
+              cleanPackaging[k] = v;
+            }
+          });
+        }
+        const cleanHeroImg = (parsed.heroImage && !parsed.heroImage.includes('unsplash.com')) ? parsed.heroImage : '';
+        const cleanQris = (parsed.qrisImage && !parsed.qrisImage.includes('unsplash.com')) ? parsed.qrisImage : '';
         rawConfig = {
           ...DEFAULT_STORE_CONFIG,
           ...parsed,
-          heroSlides: ensure5HeroSlides(parsed.heroSlides),
+          heroImage: cleanHeroImg,
+          qrisImage: cleanQris,
+          heroSlides: ensure5HeroSlides(parsed.heroSlides, cleanHeroImg),
           boutiqueStatus: parsed.boutiqueStatus?.replace(/butik/gi, 'Toko') || DEFAULT_STORE_CONFIG.boutiqueStatus,
-          packagingImages: {
-            ...DEFAULT_STORE_CONFIG.packagingImages,
-            ...(parsed.packagingImages || {}),
-          },
+          packagingImages: cleanPackaging,
         };
       } catch (e) {
         console.error(e);
@@ -381,10 +433,26 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const cloudData = await fetchCloudStoreData();
         if (cloudData && cloudData.products && cloudData.products.length > 0) {
           if (isMounted) {
+            const cleanPackaging: Record<string, string> = {};
+            if (cloudData.storeConfig?.packagingImages) {
+              Object.entries(cloudData.storeConfig.packagingImages).forEach(([k, v]) => {
+                if (typeof v === 'string' && !v.includes('unsplash.com')) {
+                  cleanPackaging[k] = v;
+                }
+              });
+            }
+            const cleanHeroImg = (cloudData.storeConfig?.heroImage && !cloudData.storeConfig.heroImage.includes('unsplash.com')) 
+              ? cloudData.storeConfig.heroImage : '';
+            const cleanQris = (cloudData.storeConfig?.qrisImage && !cloudData.storeConfig.qrisImage.includes('unsplash.com')) 
+              ? cloudData.storeConfig.qrisImage : '';
+
             const rawConfig = {
               ...DEFAULT_STORE_CONFIG,
               ...cloudData.storeConfig,
-              heroSlides: ensure5HeroSlides(cloudData.storeConfig?.heroSlides),
+              heroImage: cleanHeroImg,
+              qrisImage: cleanQris,
+              packagingImages: cleanPackaging,
+              heroSlides: ensure5HeroSlides(cloudData.storeConfig?.heroSlides, cleanHeroImg),
             };
             const migrated = autoMigratePackagingImages(cloudData.products, rawConfig);
             setProducts(migrated.products);

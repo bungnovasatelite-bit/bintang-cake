@@ -91,17 +91,20 @@ export const DetailProdukModal: React.FC = () => {
   // 4 Gaya Kemasan Utama berfoto dinamis KHUSUS untuk produk ini (liveProduct)
   // Prioritas:
   // 1. liveProduct.packagingImages (foto kemasan khusus produk ini yang diupload admin)
-  // 2. DEFAULT_PACKAGING_IMAGES (foto standar netral bawaan agar TIDAK tertukar dengan cookies lain)
+  // 2. liveProduct.image (foto produk yang diupload admin, agar selalu relevan dengan cookies ini)
   const effectivePackagingImages = useMemo(() => {
+    const pkg = liveProduct.packagingImages || {};
+    const fallback = (liveProduct.image && !liveProduct.image.includes('unsplash.com')) ? liveProduct.image : '';
+    const cleanImg = (v?: string) => (v && !v.includes('unsplash.com')) ? v : fallback;
     return {
-      minipack: liveProduct.packagingImages?.minipack || DEFAULT_PACKAGING_IMAGES.minipack,
-      ekopack: liveProduct.packagingImages?.ekopack || DEFAULT_PACKAGING_IMAGES.ekopack,
-      mika: liveProduct.packagingImages?.mika || DEFAULT_PACKAGING_IMAGES.mika,
-      bundar: liveProduct.packagingImages?.bundar || DEFAULT_PACKAGING_IMAGES.bundar,
-      persegi: liveProduct.packagingImages?.persegi || DEFAULT_PACKAGING_IMAGES.persegi,
-      kaca: liveProduct.packagingImages?.kaca || DEFAULT_PACKAGING_IMAGES.kaca,
+      minipack: cleanImg(pkg.minipack),
+      ekopack: cleanImg(pkg.ekopack),
+      mika: cleanImg(pkg.mika),
+      bundar: cleanImg(pkg.bundar),
+      persegi: cleanImg(pkg.persegi),
+      kaca: cleanImg(pkg.kaca),
     };
-  }, [liveProduct.packagingImages]);
+  }, [liveProduct.packagingImages, liveProduct.image]);
 
   const packagingShowcase = useMemo(() => {
     return getPackagingStylesShowcase(effectivePackagingImages, liveProduct.image);
@@ -604,17 +607,21 @@ export const DetailProdukModal: React.FC = () => {
                             : 'bg-white text-[#3D2314] border-[#E8DACB] hover:border-[#8B5E3C]'
                         }`}
                       >
-                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2 bg-[#FAF5EE]">
-                          <img
-                            src={style.image}
-                            alt={style.title}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src =
-                                DEFAULT_PACKAGING_IMAGES[style.id] ||
-                                'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=400&q=80';
-                            }}
-                          />
+                        <div className="relative aspect-square w-full rounded-xl overflow-hidden mb-2 bg-[#FAF5EE] flex items-center justify-center">
+                          {style.image ? (
+                            <img
+                              src={style.image}
+                              alt={style.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center p-2 text-center text-[#8C7A6B]">
+                              <Package className="w-8 h-8 stroke-[1.5] text-[#CBB296]" />
+                              <span className="text-[8.5px] font-semibold mt-1 text-[#A89078] line-clamp-1">
+                                {style.title}
+                              </span>
+                            </div>
+                          )}
                           <span
                             className={`absolute top-1 left-1 text-[8px] font-bold px-1.5 py-0.5 rounded-md ${
                               isStyleActive
@@ -678,16 +685,16 @@ export const DetailProdukModal: React.FC = () => {
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           {/* Mini Thumbnail Kemasan */}
-                          <div className="w-10 h-10 rounded-xl overflow-hidden bg-[#FAF5EE] shrink-0 border border-[#E8DACB]">
-                            <img
-                              src={opt.image}
-                              alt={opt.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src =
-                                  'https://images.unsplash.com/photo-1590080875515-8a3a8dc5735e?auto=format&fit=crop&w=400&q=80';
-                              }}
-                            />
+                          <div className="w-10 h-10 rounded-xl overflow-hidden bg-[#FAF5EE] shrink-0 border border-[#E8DACB] flex items-center justify-center">
+                            {opt.image ? (
+                              <img
+                                src={opt.image}
+                                alt={opt.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Package className="w-5 h-5 text-[#CBB296]" />
+                            )}
                           </div>
 
                           <div className="min-w-0">
